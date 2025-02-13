@@ -1,5 +1,5 @@
-import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
@@ -11,13 +11,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// ✅ Firebase アプリを初期化
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-export const provider = new GoogleAuthProvider();
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+const db = getFirestore(app);
 
-// 管理者リストを取得する関数
-export const fetchAdmins = async () => {
-  const querySnapshot = await getDocs(collection(db, "admins"));
-  return querySnapshot.docs.map((doc) => doc.data().email);
+// ✅ Firestore から許可ユーザーリストを取得
+export const fetchAllowedUsers = async () => {
+  const snapshot = await getDocs(collection(db, "allowedUsers"));
+  return snapshot.docs.map((doc) => doc.id); // 🔥 メールアドレスをリストとして返す
 };
+
+// ✅ Firestore から管理者リストを取得
+export const fetchAdmins = async () => {
+  const snapshot = await getDocs(collection(db, "admins"));
+  return snapshot.docs.map((doc) => doc.id);
+};
+
+export { auth, provider, db };

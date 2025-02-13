@@ -149,6 +149,17 @@ const timeSlots = Array.from({ length: 25 }, (_, i) => {
     return `${hour}:${minute}`;
   };
 
+  const today = new Date(); // 今日の日付（現在時刻）
+today.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット（純粋な日付比較のため）
+
+// 🔹 現在の日付より未来 or 今日のシフトのみ表示
+const PastShifts = shifts.filter((shift) => {
+  const shiftDate = new Date(shift.date); // シフトの日付を取得
+  shiftDate.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット
+
+  return shiftDate >= today; // 今日以降のシフトだけを表示
+});
+
   // シフトを登録
   const handleShiftSubmit = async () => {
     if (!selectedDate || selectedTimes.length === 0) {
