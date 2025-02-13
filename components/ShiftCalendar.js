@@ -163,7 +163,7 @@ const PastShifts = shifts.filter((shift) => {
   // シフトを登録
   const handleShiftSubmit = async () => {
     if (!selectedDate || selectedTimes.length === 0) {
-      alert("日付と時間を選択してください！");
+      alert("日付と時間を選択してください!！");
       return;
     }
   
