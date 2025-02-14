@@ -2,12 +2,12 @@
   "name": "shift-manager",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
+"scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "export": "next build && next export",
+  "start": "next start"
+},
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "firebase": "^11.3.1",

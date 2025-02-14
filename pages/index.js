@@ -1,9 +1,9 @@
 import { useState } from "react";
-import Login from "../components/Login";
-import ShiftCalendar from "../components/ShiftCalendar";
+import Login from "../components/Login.js"; // ファイルがあることを確認
+import ShiftCalendar from "../components/ShiftCalendar.js";
 
 export default function Home() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => null);
 
   return (
     <div className="container mx-auto p-4">

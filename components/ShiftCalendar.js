@@ -6,15 +6,15 @@ import { signOut } from "firebase/auth";
 import FinalShifts from "./FinalShifts";
 import HeaderWithTabs from "./HeaderWithTabs";
 import { collection, addDoc, getDocs, onSnapshot, setDoc, doc, deleteDoc } from "firebase/firestore";
-import { CalendarIcon } from "@heroicons/react/24/outline"; 
+
 
 export default function ShiftCalendar({ user, onLogout }) {
+    // 🔹 ステート管理
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTimes, setSelectedTimes] = useState([]); // 選択した時間を保存
   const [shifts, setShifts] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showFinalShifts, setShowFinalShifts] = useState(false);
-  const [userName, setUserName] = useState(""); // ログインユーザーの名前
 
 // 9:00 ～ 21:00 の時間リスト（30分単位）
 const timeSlots = Array.from({ length: 25 }, (_, i) => {
@@ -23,35 +23,50 @@ const timeSlots = Array.from({ length: 25 }, (_, i) => {
   return `${hour}:${minute}`;
 });
 
-  useEffect(() => {
-    const shiftsRef = collection(db, "shifts");
-  
-    // Firestore のデータをリアルタイムで取得
-    const unsubscribe = onSnapshot(shiftsRef, (snapshot) => {
-      const allShifts = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  
-      // 🔽 日付順（昇順）にソート
-      const sortedShifts = allShifts.sort((a, b) => a.date.localeCompare(b.date));
-  
-      // 🔽 管理者なら全員のシフトを表示、それ以外は自分のシフトのみ
-      const userShifts = isAdmin ? sortedShifts : sortedShifts.filter(shift => shift.user === user.email);
-  
-      setShifts(userShifts);
-    });
-  
-    return () => unsubscribe();
-  }, [user, isAdmin]);
+  // 🔹 今日の日付（YYYY-MM-DD 形式）
+  const today = new Date();
+  const formattedToday = today.toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).replace(/\//g, "-");
 
+useEffect(() => {
+
+  const shiftsRef = collection(db, "shifts");
+
+  // Firestore のデータをリアルタイムで取得
+  const unsubscribe = onSnapshot(shiftsRef, (snapshot) => {
+    const allShifts = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    // 🔽 日付順（昇順）にソート
+    const sortedShifts = allShifts.sort((a, b) => a.date.localeCompare(b.date));
+
+    // 🔽 ユーザーの権限に応じたデータフィルタリング
+    const filteredShifts = isAdmin
+      ? sortedShifts.filter(shift => shift.date === selectedDate) // 🔹 管理者は選択した日付のシフトのみ表示
+      : sortedShifts.filter(shift => shift.user === user.email && shift.date >= formattedToday); // 🔹 一般ユーザーは自分のシフトのみ表示
+
+    setShifts(filteredShifts);
+  });
+
+  return () => {
+    
+    unsubscribe();
+  };
+}, [user, isAdmin, selectedDate, formattedToday]); // ✅ `user`, `isAdmin`, `selectedDate` が変わるたびに更新
+
+  /** 🔽 管理者かどうかを判定 */
   useEffect(() => {
     const checkAdminStatus = async () => {
       const adminEmails = await fetchAdmins();
-      console.log("管理者リスト:", adminEmails); // 🔍 デバッグ用（管理者リストを出力）
-      console.log("現在のユーザー:", user?.email); // 🔍 自分のメールアドレスも確認
+
       setIsAdmin(adminEmails.includes(user?.email)); // 🚀 管理者判定
     };
   
     if (user) checkAdminStatus();
   }, [user]);
+
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -59,10 +74,12 @@ const timeSlots = Array.from({ length: 25 }, (_, i) => {
     onLogout();
   };
 
+    /** 🔽 シフトデータをユーザー権限ごとにフィルタリング */
   const filteredShifts = isAdmin
-  ? shifts.filter(shift => shift.date === selectedDate) // 管理者は選択した日付のシフトを見る
-  : shifts; // 一般ユーザーは全員のシフトを一覧表示
+  ? shifts.filter(shift => shift.date === selectedDate) // 管理者は選択した日付のシフトを表示
+  : shifts.filter(shift => shift.user === user.email && shift.date >= formattedToday); 
 
+   /** 🔽 シフト削除 */
   const handleDeleteShift = async (shiftId) => {
     const confirmDelete = window.confirm("このシフトを削除しますか？");
     if (!confirmDelete) return; // キャンセルしたら削除しない
@@ -71,7 +88,7 @@ const timeSlots = Array.from({ length: 25 }, (_, i) => {
       await deleteDoc(doc(db, "shifts", shiftId)); // Firestore から削除
       setShifts((prevShifts) => prevShifts.filter((shift) => shift.id !== shiftId)); // 画面からも削除
     } catch (error) {
-      console.error("エラー:", error);
+      console.error("🚨 ログインエラー:", error); 
       alert("シフトの削除に失敗しました");
     }
   };
@@ -97,20 +114,11 @@ const timeSlots = Array.from({ length: 25 }, (_, i) => {
     }
   };
 
-
     // デバッグ用（状態が更新されたらコンソールに表示）
-    useEffect(() => {
-      console.log("状態更新:", selectedTimes);
-    }, [selectedTimes]);
+    // useEffect(() => {
+    //   console.log("状態更新:", selectedTimes);
+    // }, [selectedTimes]);
   
-
-  // 時間ボタンのON/OFFを切り替える
-  const toggleTime = (time) => {
-    setSelectedTimes((prev) =>
-      prev.includes(time) ? prev.filter((t) => t !== time) : [...prev, time]
-    );
-  };
-
   // 連続した時間を `start - end` の形にまとめる関数
   const groupConsecutiveTimes = (times) => {
     if (times.length === 0) return [];
@@ -149,16 +157,16 @@ const timeSlots = Array.from({ length: 25 }, (_, i) => {
     return `${hour}:${minute}`;
   };
 
-  const today = new Date(); // 今日の日付（現在時刻）
+  
 today.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット（純粋な日付比較のため）
 
 // 🔹 現在の日付より未来 or 今日のシフトのみ表示
-const PastShifts = shifts.filter((shift) => {
-  const shiftDate = new Date(shift.date); // シフトの日付を取得
-  shiftDate.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット
+// const PastShifts = shifts.filter((shift) => {
+//   const shiftDate = new Date(shift.date); // シフトの日付を取得
+//   shiftDate.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット
 
-  return shiftDate >= today; // 今日以降のシフトだけを表示
-});
+//   return shiftDate >= today; // 今日以降のシフトだけを表示
+// });
 
   // シフトを登録
   const handleShiftSubmit = async () => {
@@ -204,23 +212,6 @@ const PastShifts = shifts.filter((shift) => {
     }
   };
 
-  const handleConfirmShift = async () => {
-    if (shifts.length === 0) {
-      alert("確定するシフトがありません！");
-      return;
-    }
-  
-    try {
-      await addDoc(collection(db, "finalShifts"), {
-        shifts,
-        confirmedAt: new Date(),
-      });
-      alert("シフトを確定しました！");
-    } catch (error) {
-      console.error("エラー:", error);
-      alert("シフト確定に失敗しました");
-    }
-  };
 
   const handleAddToFinalShifts = async (shift) => {
     try {
@@ -357,7 +348,7 @@ const PastShifts = shifts.filter((shift) => {
                 <div className="border-l pl-6 min-w-[220px] w-1/3">
                   <h3 className="font-bold mb-2">{selectedDate}</h3>
                   <div className="relative left-10 w-full h-[600px]">
-                    {timeSlots.map((time, index) => (
+                    {timeSlots.map((time) => (
                       <div key={time} className="relative flex items-center h-[30px]">
                                 
                         <span className="absolute -left-8 text-sm">{time}</span>

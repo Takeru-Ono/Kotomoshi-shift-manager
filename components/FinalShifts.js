@@ -4,7 +4,7 @@ import { db, fetchAdmins } from "../firebase";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
-export default function FinalShifts({ user, onBack }) {
+export default function FinalShifts({ user }) {
   const [finalShifts, setFinalShifts] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedDateShifts, setSelectedDateShifts] = useState([]);
@@ -196,10 +196,10 @@ const handleDeleteFinalShift = async (shiftId) => {
 <div className="border-l pl-6 min-w-[220px] w-1/2">
   <h3 className="font-bold mb-2">{selectedDate}</h3>
   <div className="relative left-10 w-full h-[770px]">
-    {timeSlots.map((time, index) => {
+    {timeSlots.map((time) => {
       // 指定の時間帯に入っているシフトを取得
       const shiftsAtTime = selectedDateShifts.filter(shift => shift.times.includes(time));
-      const totalShifts = shiftsAtTime.length; // その時間帯のシフト人数
+
 
       return (
         <div key={time} className="relative flex items-center h-[30px] cursor-pointer">
