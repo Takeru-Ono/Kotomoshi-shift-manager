@@ -169,7 +169,7 @@ const handleDeleteFinalShift = async (shiftId) => {
           <div className="p-4 border rounded shadow-md w-full">
             <Calendar tileContent={tileContent} 
             onClickDay={handleDateClick} 
-            className="w-full h-full text-sm"
+            className="w-full h-full"
             locale="ja-JP"
             />
           </div>
