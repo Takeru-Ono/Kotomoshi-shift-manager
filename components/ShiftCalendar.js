@@ -6,7 +6,7 @@ import { signOut } from "firebase/auth";
 import FinalShifts from "./FinalShifts";
 import HeaderWithTabs from "./HeaderWithTabs";
 import { collection, addDoc, getDocs, onSnapshot, setDoc, doc, deleteDoc } from "firebase/firestore";
-
+import todayEvents from "../data/todayEvents"; // ✅ データファイルをインポート
 
 export default function ShiftCalendar({ user, onLogout }) {
     // 🔹 ステート管理
@@ -15,6 +15,7 @@ export default function ShiftCalendar({ user, onLogout }) {
   const [shifts, setShifts] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showFinalShifts, setShowFinalShifts] = useState(false);
+  const [todayInfo, setTodayInfo] = useState("");
 
 // 9:00 ～ 21:00 の時間リスト（30分単位）
 const timeSlots = Array.from({ length: 25 }, (_, i) => {
@@ -93,8 +94,27 @@ useEffect(() => {
     }
   };
 
+  // const fetchTodayInfo = async (date) => {
+  //   try {
+  //     const response = await fetch(`https://today-in-history-api.com/${date}`);
+  //     const data = await response.json();
+  //     return data.description; // 例: "今日は○○の日！"
+  //   } catch (error) {
+  //     console.error("データ取得エラー:", error);
+  //     return "？？";
+  //   }
+  // };
+  const getTodayInfo = (date) => {
+    const formattedDate = date.toLocaleDateString("ja-JP", {
+      month: "2-digit",
+      day: "2-digit",
+    }).replace(/\//g, "-");
+  
+    return todayEvents[formattedDate] || { title: "??", description: "今日は特に記念日はありません" };
+  };
+
   // 日付がクリックされたとき
-  const handleDateClick = (date) => {
+  const handleDateClick = async (date) => {
     // 🔽 日本時間での日付フォーマットを使用（UTCのズレを回避）
     const formattedDate = date.toLocaleDateString("ja-JP", {
       year: "numeric",
@@ -103,6 +123,8 @@ useEffect(() => {
     }).replace(/\//g, "-"); // yyyy-mm-dd の形式に変換
   
     setSelectedDate(formattedDate);
+  
+    setTodayInfo(getTodayInfo(date));
   
     // 🔽 すでに登録されているシフトを取得
     const existingShift = shifts.find(shift => shift.date === formattedDate && shift.user === user.email);
@@ -272,6 +294,8 @@ today.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット（純粋な日
     setStartTime(null);
   };
 
+  
+
   return (
     <div className="relative overflow-hidden mt-4">
       {/* ✅ 共通のヘッダー */}
@@ -311,9 +335,23 @@ today.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット（純粋な日
                   {/* 時間選択 */}
                   {selectedDate && (
                     <div className="mt-4 p-4 border rounded shadow-md w-full">
-                      {/* 🔽 選択時間のタイトル & 選択取消ボタン */}
-                      <div className="flex items-center justify-between mt-4 mb-4">
-                        <h3 className="text-lg font-bold">選択した日: {selectedDate}</h3>
+                      {/* 🔹 選択時間のタイトル & 選択取消ボタン */}
+                      <div className="flex items-center justify-between mb-4 ml-10">
+                        {/* 🔹 左側に日付とタイトル */}
+                        <div className="flex flex-col">
+                          <h3 className="text-2xl font-bold">
+                            {selectedDate}
+                            <span className="text-sm font-normal ml-2">
+                              {todayInfo.title && ` は${todayInfo.title} `}
+                            </span>
+                          </h3>
+                          {/* 🔹 その下に説明を小さめのフォントで表示 */}
+                          {todayInfo.description && (
+                            <p className="text-xs text-gray-600 mt-1">{todayInfo.description}</p>
+                          )}
+                        </div>
+
+                        {/* 🔹 ばつボタンは右側に固定 */}
                         <button
                           onClick={clearSelection}
                           className="w-12 h-12 bg-red-500 text-white flex items-center justify-center rounded"

@@ -3,18 +3,23 @@ import { collection, getDocs, doc, deleteDoc, onSnapshot } from "firebase/firest
 import { db, fetchAdmins } from "../firebase";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import todayEvents from "../data/todayEvents"; // ✅ データファイルをインポート
+
 
 export default function FinalShifts({ user }) {
   const [finalShifts, setFinalShifts] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedDateShifts, setSelectedDateShifts] = useState([]);
-  
+  const [todayInfo, setTodayInfo] = useState("");
+
+
   const timeSlots = Array.from({ length: 25 }, (_, i) => {
     const hour = 9 + Math.floor(i / 2);  // 9時からスタート
     const minute = i % 2 === 0 ? "00" : "30"; // 00分か30分
     return `${hour}:${minute}`;
   });
   const [isAdmin, setIsAdmin] = useState(false);
+
 
   useEffect(() => {
     const fetchFinalShifts = async () => {
@@ -58,9 +63,19 @@ const getUserColor = (userId) => {
   return `hsl(${hue}, 70%, 60%)`; // 彩度と明度を調整
 };
 
+const getTodayInfo = (date) => {
+  const formattedDate = date.toLocaleDateString("ja-JP", {
+    month: "2-digit",
+    day: "2-digit",
+  }).replace(/\//g, "-");
+
+  return todayEvents[formattedDate] || { title: "??", description: "今日は特に記念日はありません" };
+};
+
   const handleDateClick = (date) => {
     const formattedDate = date.toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-");
     setSelectedDate(formattedDate);
+    setTodayInfo(getTodayInfo(date));
     setSelectedDateShifts(finalShifts.filter(shift => shift.date === formattedDate));
   };
 
@@ -155,12 +170,21 @@ const handleDeleteFinalShift = async (shiftId) => {
             <Calendar tileContent={tileContent} 
             onClickDay={handleDateClick} 
             className="w-full h-full text-sm"
+            locale="ja-JP"
             />
           </div>
                 {/* 🔽 下段：確定版シフトリスト (w-full) */}
       {selectedDate && (
         <div className="w-full mt-2">
-          <h3 className="font-bold">{selectedDate} の確定シフト一覧</h3>
+          <div className="flex flex-col">
+            <h3 className="text-2xl font-bold">
+              {selectedDate}
+              <span className="text-sm font-normal ml-2">
+                {todayInfo.title && ` は${todayInfo.title} `}
+              </span>
+            </h3>
+          </div>
+          <h3 className="font-bold">確定シフト一覧</h3>
           <ul className="w-full">
             {selectedDateShifts.map((shift) => {
               const groupedTimes = groupConsecutiveTimes(shift.times);

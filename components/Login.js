@@ -60,8 +60,10 @@ export default function Login({ onLogin }) {
   const handleLogin = async () => {
     try {
       // console.log("🔹 ログイン処理を開始します");
-      const result = await signInWithPopup(auth, provider);
-      // console.log("✅ Firebaseログイン成功", result);
+
+      const result = await signInWithPopup(auth, provider.setCustomParameters({
+        prompt: "select_account" // ← ✅ 毎回アカウント選択画面を表示
+      }));
 
       if (!result || !result.user) {
         throw new Error("ログインに失敗しました。ユーザー情報が取得できません。");
