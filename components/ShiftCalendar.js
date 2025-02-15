@@ -16,6 +16,7 @@ export default function ShiftCalendar({ user, onLogout }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showFinalShifts, setShowFinalShifts] = useState(false);
   const [todayInfo, setTodayInfo] = useState("");
+  const [memo, setMemo] = useState(""); // 🔥 メモのステートを追加
 
 // 9:00 ～ 21:00 の時間リスト（30分単位）
 const timeSlots = Array.from({ length: 25 }, (_, i) => {
@@ -104,6 +105,7 @@ useEffect(() => {
   //     return "？？";
   //   }
   // };
+
   const getTodayInfo = (date) => {
     const formattedDate = date.toLocaleDateString("ja-JP", {
       month: "2-digit",
@@ -137,10 +139,12 @@ useEffect(() => {
   };
 
     // デバッグ用（状態が更新されたらコンソールに表示）
+
     // useEffect(() => {
     //   console.log("状態更新:", selectedTimes);
     // }, [selectedTimes]);
   
+
   // 連続した時間を `start - end` の形にまとめる関数
   const groupConsecutiveTimes = (times) => {
     if (times.length === 0) return [];
@@ -217,6 +221,7 @@ today.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット（純粋な日
           date: selectedDate,
           times: selectedTimes, // 🔥 ここがポイント！新しい選択リストをそのまま保存
           user: user.email,
+          memo: memo,
         });
       } else {
         // 🔽 Firestore に新規シフトを追加
@@ -224,10 +229,12 @@ today.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット（純粋な日
           date: selectedDate,
           times: selectedTimes,
           user: user.email,
+          memo: memo,
         });
       }
   
       setSelectedTimes([]); // 選択リセット
+      setMemo("");
     } catch (error) {
       console.error("エラー:", error);
       alert("シフト登録/更新に失敗しました");
@@ -372,11 +379,18 @@ today.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット（純粋な日
                           </button>
                         ))}
                       </div>
+                      {/* 🔽 メモ入力エリア */}
+                      <textarea
+                        className="w-full p-2 border rounded mt-2"
+                        placeholder="メモを入力"
+                        value={memo}
+                        onChange={(e) => setMemo(e.target.value)}
+                      ></textarea>
                       <button
                         onClick={handleShiftSubmit}
                         className="mt-4 bg-green-500 text-white p-2 rounded w-full"
                       >
-                        シフト登録
+                        シフト希望登録
                       </button>
                     </div>
                   )}
@@ -425,7 +439,10 @@ today.setHours(0, 0, 0, 0); // 時刻を 00:00:00 にリセット（純粋な日
                         {!isAdmin && <span className="min-w-[100px]">{shift.date}</span>}
                         {/* 時間帯 */}
                         <span className="flex-1 whitespace-normal break-words">{groupedTimes.join(", ")}</span>
-
+                        {/* 🔽 メモを表示 */}
+                        {shift.memo && (
+                          <span className="text-gray-600 text-sm italic ml-4">📝 {shift.memo}</span>
+                        )}
                         {/* 🔽 確定ボタン（管理者のみ表示） */}
                         {isAdmin && (
                           <button
