@@ -11,22 +11,50 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// ✅ Firebase アプリを初期化
+// ✅ Firebase 初期化
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
+const isDev = process.env.NODE_ENV === "development";
 
-// ✅ Firestore から許可ユーザーリストを取得
+// ✅ Firestore から `allowedUsers` を取得
 export const fetchAllowedUsers = async () => {
-  const snapshot = await getDocs(collection(db, "allowedUsers"));
-  return snapshot.docs.map((doc) => doc.id); // 🔥 メールアドレスをリストとして返す
+  try {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.warn("🚨 `auth.currentUser` が null です！");
+      return [];
+    }
+
+    console.log("✅ Firestore へのリクエストを送信:", currentUser.email);
+
+    const snapshot = await getDocs(collection(db, "allowedUsers"));
+    
+    const allowedUsers = snapshot.docs.map((doc) => doc.data().email);
+    if (isDev) console.log("✅ 許可ユーザー取得成功:", allowedUsers);
+
+    return allowedUsers;
+  } catch (error) {
+    console.error("🔥 Firestore `allowedUsers` 取得エラー:", error);
+    return [];
+  }
 };
 
-// ✅ Firestore から管理者リストを取得
 export const fetchAdmins = async () => {
-  const snapshot = await getDocs(collection(db, "admins"));
-  return snapshot.docs.map((doc) => doc.id);
+  try {
+    console.log("🔍 Firestore から `admins` を取得...");
+    const snapshot = await getDocs(collection(db, "admins"));
+    
+    // `email` フィールドの値だけを取得（自動生成IDは不要）
+    const admins = snapshot.docs.map((doc) => doc.data().email);
+
+    if (isDev) console.log("✅ 管理者取得成功:", admins);
+    return admins;
+  } catch (error) {
+    console.error("🔥 Firestore `admins` 取得エラー:", error);
+    return [];
+  }
 };
 
-export { auth, provider, db };
+export { auth, provider, db};
