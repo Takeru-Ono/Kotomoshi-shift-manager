@@ -1,4 +1,30 @@
+import { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase'; // Adjust the import path as necessary
+
+
 const HeaderWithTabs = ({ showFinalShifts, setShowFinalShifts, user, isAdmin, handleLogout }) => {
+
+  const [allowedUserDisplayName, setAllowedUserDisplayName] = useState("");
+
+  // Function to fetch AllowedUser's displayName
+  const fetchAllowedUserDisplayName = async (email) => {
+    try {
+      const userDoc = await getDoc(doc(db, "allowedUsers", email));
+      if (userDoc.exists()) {
+        setAllowedUserDisplayName(userDoc.data().displayName);
+      }
+    } catch (error) {
+      console.error("Error fetching allowed user displayName:", error);
+    }
+  };
+
+  // Call the function to fetch displayName when component mounts
+  useEffect(() => {
+    if (user && user.email) {
+      fetchAllowedUserDisplayName(user.email);
+    }
+  }, [user]);
 
     const toggleSwitch = () => {
         setShowFinalShifts((prev) => !prev); // 🔥 現在の状態を反転（トグル切り替え）
@@ -45,7 +71,7 @@ const HeaderWithTabs = ({ showFinalShifts, setShowFinalShifts, user, isAdmin, ha
           <span className={`px-3 py-1 rounded-lg text-white ${isAdmin ? "bg-red-500" : "bg-blue-500"}`}>
             {isAdmin ? "管理者" : "一般"}
           </span>
-          <span className="text-sm text-gray-700">{user?.displayName || "ゲスト"} さん</span>
+          <span className="text-sm text-gray-700">{allowedUserDisplayName} さん</span>
           <button onClick={handleLogout} className="bg-red-500 text-white p-2 rounded">
             ログアウト
           </button>
