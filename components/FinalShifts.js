@@ -8,6 +8,9 @@ import GlobalModal from "../components/GlobalModal";
 import { updateDoc } from "firebase/firestore";
 
 
+
+
+
 export default function FinalShifts({ user }) {
   const [finalShifts, setFinalShifts] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -334,6 +337,26 @@ useEffect(() => {
   return () => unsubscribe();
 }, []);
 
+const handleSendToDiscord = async () => {
+  const currentMonth = new Date().toISOString().slice(0, 7); // 現在の月 (例: "2025-04")
+
+  try {
+    const response = await fetch("http://localhost:3000/send-discord", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month: currentMonth, shifts: finalShifts }),
+    });
+
+    if (response.ok) {
+      alert("Discordに送信しました！");
+    } else {
+      alert("Discord送信に失敗しました。");
+    }
+  } catch (error) {
+    console.error("エラー:", error);
+    alert("Discord送信に失敗しました。");
+  }
+};
 
 return (
   <div className="relative w-full max-w-screen-2xl mx-auto p-4 border rounded-lg shadow-md bg-white">
@@ -365,18 +388,7 @@ return (
                 </span>
               </h3>
 
-              {/* 🔥 管理者だけ `+` ボタンを表示 */}
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    console.log("＋ボタンがクリックされました！"); 
-                    setShowAddShiftModal(true);
-                  }}
-                  className="bg-blue-500 text-white px-3 py-1 rounded-full text-lg"
-                >
-                  ＋
-                </button>
-              )}
+
             </div>
 
             <h3 className="font-bold mt-4">確定シフト一覧</h3>
@@ -432,6 +444,17 @@ return (
 
       {/* 🔽 右側：時刻表 */}
       <div className="border-l pl-6 min-w-[220px] w-1/2">
+      {isAdmin && (
+          <button
+          onClick={() => {
+            const currentMonth = new Date().toISOString().slice(0, 7); // 現在の月 (例: "2025-04")
+            handleSendToDiscord();
+          }}
+            className="mb-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
+          >
+            この月のシフトをDiscordに送る
+          </button>
+        )}
         <h3 className="font-bold mb-2">{selectedDate}</h3>
         <div className="relative left-10 w-full h-[770px]">
           {timeSlots.map((time) => {

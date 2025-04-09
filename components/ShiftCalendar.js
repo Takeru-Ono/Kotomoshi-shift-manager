@@ -21,10 +21,11 @@ export default function ShiftCalendar({ user, onLogout }) {
   const [allowedUserDisplayName, setAllowedUserDisplayName] = useState("");
   const [calendarShifts, setCalendarShifts] = useState([]);
   const [originalShifts, setOriginalShifts] = useState([]);
-  // const [requestedShifts, setRequestedShifts] = useState([]);
+  const [requestedShifts, setRequestedShifts] = useState([]);
   const [futureRequestedShifts, setFutureRequestedShifts] = useState([]); // フィルタリング後のリクエストシフト
+  const [selectedDateShifts, setSelectedDateShifts] = useState([]);
 
-  // const [selectedDateShifts, setSelectedDateShifts] = useState([]);
+  // const [selectedDateShifts setSelectedDateShifts] = useState([]);
 
 
   const fetchAllowedUserDisplayName = async (email) => {
@@ -45,6 +46,12 @@ export default function ShiftCalendar({ user, onLogout }) {
       fetchAllowedUserDisplayName(user.email);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (requestedShifts.length > 0) {
+      console.log("Requested Shifts (一度だけログ出力):", requestedShifts);
+    }
+  }, []); 
 
 // 9:00 ～ 21:00 の時間リスト（30分単位）
 const timeSlots = Array.from({ length: 25 }, (_, i) => {
@@ -193,6 +200,11 @@ useEffect(() => {
   }
 }, [filteredShifts, selectedDate]);
 
+useEffect(() => {
+  if (selectedDateShifts.length > 0) {
+    console.log("Selected Date Shifts:", selectedDateShifts);
+  }
+}, [selectedDateShifts]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -510,9 +522,9 @@ const saveOriginalRequests = async (shifts) => {
       batch.set(docRef, shift); // バッチに書き込み操作を追加
     });
     await batch.commit(); // バッチ操作を実行
-    console.log("Original requests saved successfully");
+    // console.log("Original requests saved successfully");
   } catch (e) {
-    console.error("Error saving original requests: ", e);
+    // console.error("Error saving original requests: ", e);
   }
 };
 
