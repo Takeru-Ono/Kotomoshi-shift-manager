@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, deleteDoc, onSnapshot, addDoc } from "firebase/firestore";
+import { collection, query, getDocs, doc, deleteDoc, onSnapshot, addDoc } from "firebase/firestore";
 import { db, fetchAdmins } from "../firebase";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import todayEvents from "../data/todayEvents"; // ✅ データファイルをインポート
 import GlobalModal from "../components/GlobalModal";
 import { updateDoc } from "firebase/firestore";
-
+import getFinalShiftsByMonth from "../backend/getFinalShiftsByMonth"; // 関数をインポート
 
 
 
@@ -25,6 +25,9 @@ export default function FinalShifts({ user }) {
   const [editedTimes, setEditedTimes] = useState([]);
   const [adminComment, setAdminComment] = useState("");
   const [startTime, setStartTime] = useState(null); // 範囲選択の開始時間
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // 選択された月を保存する State
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear()); // 選択された年を保存する State
+  const [calendarViewDate, setCalendarViewDate] = useState(new Date()); // カレンダーの現在のビュー
 
 
   const timeSlots = Array.from({ length: 25 }, (_, i) => {
@@ -33,6 +36,21 @@ export default function FinalShifts({ user }) {
     return `${hour}:${minute}`;
   });
   const [isAdmin, setIsAdmin] = useState(false);
+
+// カレンダーの月変更を検知する useEffect
+useEffect(() => {
+  const year = calendarViewDate.getFullYear();
+  const month = String(calendarViewDate.getMonth() + 1).padStart(2, "0"); // 月を2桁にフォーマット
+  console.log("useEffectで検知:", year, month); // デバッグログ
+  setSelectedYear(year);
+  setSelectedMonth(month);
+}, [calendarViewDate]); // calendarViewDate が変更されたときに実行
+
+// カレンダーのビュー変更時に呼び出される関数
+const handleActiveStartDateChange = ({ activeStartDate }) => {
+  console.log("handleActiveStartDateChange:", activeStartDate); // デバッグログ
+  setCalendarViewDate(activeStartDate); // カレンダーの現在のビューを更新
+};
 
 
   useEffect(() => {
@@ -338,25 +356,34 @@ useEffect(() => {
 }, []);
 
 const handleSendToDiscord = async () => {
-  const currentMonth = new Date().toISOString().slice(0, 7); // 現在の月 (例: "2025-04")
+  console.log("送信する月:", selectedMonth);
+  console.log("送信する年:", selectedYear);
 
   try {
-    const response = await fetch("http://localhost:3000/send-discord", {
+    // Firestore から特定の年月のシフトデータを取得
+    const shifts = await getFinalShiftsByMonth(selectedMonth, selectedYear);
+    console.log("取得したシフトデータ:", shifts); // デバッグログ
+
+    const response = await fetch("http://localhost:3001/send-discord", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ month: currentMonth, shifts: finalShifts }),
+      body: JSON.stringify({ month: selectedMonth, year: selectedYear, shifts: shifts }), // 取得したシフトデータを送信
     });
 
+    console.log("レスポンスステータス:", response.status);
     if (response.ok) {
+      console.log("レスポンス成功:", await response.text());
       alert("Discordに送信しました！");
     } else {
+      console.error("レスポンス失敗:", await response.text());
       alert("Discord送信に失敗しました。");
     }
   } catch (error) {
-    console.error("エラー:", error);
+    console.error("リクエストエラー:", error);
     alert("Discord送信に失敗しました。");
   }
 };
+
 
 return (
   <div className="relative w-full max-w-screen-2xl mx-auto p-4 border rounded-lg shadow-md bg-white">
@@ -372,6 +399,7 @@ return (
           <Calendar 
             tileContent={tileContent} 
             onClickDay={handleDateClick} 
+            onActiveStartDateChange={handleActiveStartDateChange} // 👈 ここを変更
             className="w-full h-full"
             locale="ja-JP"
           />
@@ -446,14 +474,11 @@ return (
       <div className="border-l pl-6 min-w-[220px] w-1/2">
       {isAdmin && (
           <button
-          onClick={() => {
-            const currentMonth = new Date().toISOString().slice(0, 7); // 現在の月 (例: "2025-04")
-            handleSendToDiscord();
-          }}
-            className="mb-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
-          >
-            この月のシフトをDiscordに送る
-          </button>
+          onClick={handleSendToDiscord}
+          className="mb-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
+        >
+          この月のシフトをDiscordに送る
+        </button>
         )}
         <h3 className="font-bold mb-2">{selectedDate}</h3>
         <div className="relative left-10 w-full h-[770px]">

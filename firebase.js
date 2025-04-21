@@ -1,6 +1,9 @@
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,8 +14,14 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// console.log("Firebase API Key:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+// console.log("Firebase Auth Domain:", process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
+// console.log("Firebase Project ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+
 // ✅ Firebase 初期化
+// console.log("Firebase 初期化開始");
 const app = initializeApp(firebaseConfig);
+// console.log("Firebase 初期化成功");
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
