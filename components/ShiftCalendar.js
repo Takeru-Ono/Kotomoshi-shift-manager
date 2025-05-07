@@ -21,10 +21,9 @@ export default function ShiftCalendar({ user, onLogout }) {
   const [allowedUserDisplayName, setAllowedUserDisplayName] = useState("");
   const [calendarShifts, setCalendarShifts] = useState([]);
   const [originalShifts, setOriginalShifts] = useState([]);
-  // const [requestedShifts, setRequestedShifts] = useState([]);
+  const [requestedShifts, setRequestedShifts] = useState([]);
   const [futureRequestedShifts, setFutureRequestedShifts] = useState([]); // フィルタリング後のリクエストシフト
-
-  // const [selectedDateShifts, setSelectedDateShifts] = useState([]);
+  const [selectedDateShifts, setSelectedDateShifts] = useState([]);
 
 
   const fetchAllowedUserDisplayName = async (email) => {
@@ -592,12 +591,11 @@ const handleDeleteVolunteerShift = async (shiftId) => {
           {/* ✅ 全体を囲むコンテナ */}
             <div className="w-full max-w-screen-2xl mx-auto p-4 border rounded-lg shadow-md bg-white">
               
-              {/* 🔽 上段：カレンダー・時間選択・時刻表（横並び） */}
-              <div className="flex gap-6 overflow-hidden">
+              {/* 🔽 上段：タイトルとカレンダー・時間選択・時刻表（横並び） */}
+              <h2 className="text-lg font-bold mb-4">シフト希望登録</h2>
+              <div className="flex gap-6 overflow-hidden items-start">
                 
-                {/* 🔽 左側：カレンダー & 時間選択（w-2/3） */}
-                <div className="w-2/3 flex flex-col">
-                <h2 className="text-lg font-bold mb-4">シフト希望登録</h2>
+                <div className="w-1/3 flex flex-col h-full">
                   {/* カレンダー */}
                   <div className="p-4 border rounded shadow-md w-full">
                     <Calendar 
@@ -607,10 +605,87 @@ const handleDeleteVolunteerShift = async (shiftId) => {
                       locale="ja-JP"
                     />
                   </div>
+                </div>
 
+                {/* 🔽 真ん中：時刻表（w-1/3） */}
+                <div className="border-l pl-6 min-w-[100px] w-1/4 h-full flex flex-col justify-start">
+                  <h3 className="font-bold mb-2">{selectedDate}</h3>
+                  <div className="relative left-10 max-h-[350px] h-auto overflow-y-scroll">
+                    {timeSlots.map((time) => (
+                      <div key={time} className="relative flex items-center h-[30px]">
+                        <span className="absolute -left-0.1 text-sm">{time}</span>
+                        <div className="absolute left-10 top-3 w-1/2 h-[1px] bg-gray-400"></div>
+                        <div
+                          className={`absolute left-10 top-3 h-[30px] transition cursor-pointer ${
+                            selectedTimes.includes(time) ? "bg-green-500 opacity-50" : "bg-transparent"
+                          }`}
+                          onClick={() => toggleTimeRange(time)}
+                        ></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              {/* ↓ 自分の登録したシフト */}
+                <div className="border-l pl-6 min-w-[100px] w-1/3 h-full flex flex-col justify-start items-end">
+                <h3 className="font-bold mt-4">
+                  {isAdmin && selectedDate ? `${selectedDate} に働くことができるスタッフ一覧` : "登録済みの自分のシフト希望"}
+                </h3>
+                <ul className="w-full">
+                  {filteredShifts.map((shift) => {
+                    const groupedTimes = groupConsecutiveTimes(shift.times);
+
+                    return (
+                      <li
+                        key={shift.id}
+                        onClick={() => handleDateClick(new Date(shift.date))}
+                        className="border p-2 my-2 shadow-sm flex items-center justify-between gap-2 w-full cursor-pointer hover:bg-gray-100 transition"
+                      >
+                        {/* 管理者なら名前を表示 */}
+                        {isAdmin && <span className="text-sm text-gray-600">{shift.displayName}</span>}
+                        {/* 一般ユーザーなら日付を表示 */}
+                        {!isAdmin && <span className="min-w-[100px]">{shift.date}</span>}
+                        {/* 時間帯 */}
+                        <span className="text-sm text-gray-800">{groupedTimes.join(", ")}</span>
+                        {/* 🔽 メモを表示 */}
+                        {shift.memo && (
+                          <span className="text-gray-600 text-sm italic ml-4">📝 {shift.memo}</span>
+                        )}
+                        {/* 🔽 確定ボタン（管理者のみ表示） */}
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleAddToFinalShifts(shift)}
+                            className="bg-blue-500 text-white px-4 py-2 rounded text-sm"
+                          >
+                            確定
+                          </button>
+                        )}
+                        {/* 🔽 削除ボタン（ユーザー本人のみ） */}
+                        {user.email === shift.user && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteShift(shift.id);
+                            }}
+                            className="bg-red-500 text-white p-2 rounded text-sm min-w-[80px] text-center"
+                          >
+                            削除
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div> 
+              {/* ↑ 自分の登録したシフト */}
+
+
+              </div> 
+
+                <div className="flex">
                   {/* 時間選択 */}
                   {selectedDate && (
-                    <div className="mt-4 p-4 border rounded shadow-md w-full">
+                    <div className="mt-4 p-4 border rounded shadow-md w-4/5">
                       {/* 🔹 選択時間のタイトル & 選択取消ボタン */}
                       <div className="flex items-center justify-between mb-4 ml-10">
                         {/* 🔹 左側に日付とタイトル */}
@@ -671,33 +746,9 @@ const handleDeleteVolunteerShift = async (shiftId) => {
                       )}
                     </div>
                   )}
-                </div>
 
-                {/* 🔽 右側：時刻表（w-1/3） */}
-                <div className="border-l pl-6 min-w-[220px] w-1/3">
-                  <h3 className="font-bold mb-2">{selectedDate}</h3>
-                  <div className="relative left-10 w-full h-[600px]">
-                    {timeSlots.map((time) => (
-                      <div key={time} className="relative flex items-center h-[30px]">
-                                
-                        <span className="absolute -left-8 text-sm">{time}</span>
-                        <div className="absolute left-10 top-3 w-full h-[1px] bg-gray-400"></div>
-                        <div
-                          className={`absolute left-10 top-3 w-full h-[30px] transition cursor-pointer ${
-                            selectedTimes.includes(time) ? "bg-green-500 opacity-50" : "bg-transparent"
-                          }`}
-                          onClick={() => toggleTimeRange(time)}
-                        ></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
-              </div> {/* 🔚 上段（カレンダー＆時間選択＆時刻表） */}
-
-              {/* 🔽 下段：登録済みのシフト一覧（w-full） */}
-              <div className="w-full max-w-screen-2xl mx-auto px-4 mt-6 flex">
-                  {/* 左側：管理者からのリクエストシフト */}
+              <div className="w-1/3 max-w-screen-2xl mx-auto px-4 mt-6 flex">
                     <div className="w-1/2 pr-2">
                       <h3 className="font-bold mt-4">管理者からのリクエストシフト</h3>
                       <ul className="w-full">
@@ -742,60 +793,9 @@ const handleDeleteVolunteerShift = async (shiftId) => {
                       </ul>
                     </div>
 
-
-                  {/* 右側：登録済みのシフト */}
-               <div className="w-1/2 pl-2">
-                <h3 className="font-bold mt-4">
-                  {isAdmin && selectedDate ? `${selectedDate} に働くことができるスタッフ一覧` : "登録済みの自分のシフト希望"}
-                </h3>
-                <ul className="w-full">
-                  {filteredShifts.map((shift) => {
-                    const groupedTimes = groupConsecutiveTimes(shift.times);
-
-                    return (
-                      <li
-                        key={shift.id}
-                        onClick={() => handleDateClick(new Date(shift.date))}
-                        className="border p-2 my-2 shadow-sm flex flex-wrap items-center gap-4 w-full max-w-screen-2xl cursor-pointer hover:bg-gray-100 transition"
-                      >
-                        {/* 管理者なら名前を表示 */}
-                        {isAdmin && <span className="text-sm text-gray-600 min-w-[150px]">{shift.displayName}</span>}
-                        {/* 一般ユーザーなら日付を表示 */}
-                        {!isAdmin && <span className="min-w-[100px]">{shift.date}</span>}
-                        {/* 時間帯 */}
-                        <span className="flex-1 whitespace-normal break-words">{groupedTimes.join(", ")}</span>
-                        {/* 🔽 メモを表示 */}
-                        {shift.memo && (
-                          <span className="text-gray-600 text-sm italic ml-4">📝 {shift.memo}</span>
-                        )}
-                        {/* 🔽 確定ボタン（管理者のみ表示） */}
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleAddToFinalShifts(shift)}
-                            className="bg-blue-500 text-white p-2 rounded text-sm min-w-[100px] text-center"
-                          >
-                            確定
-                          </button>
-                        )}
-                        {/* 🔽 削除ボタン（ユーザー本人のみ） */}
-                        {user.email === shift.user && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteShift(shift.id);
-                            }}
-                            className="bg-red-500 text-white p-2 rounded text-sm min-w-[80px] text-center"
-                          >
-                            削除
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
+                    </div>
+ 
               </div>
-              </div>
-              {/* 🔽 下段：登録済みのシフト一覧（w-full） */}
 
             </div>
         </div>
