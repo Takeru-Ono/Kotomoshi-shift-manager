@@ -710,7 +710,7 @@ const handleDeleteVolunteerShift = async (shiftId) => {
                           ✖
                         </button>
                       </div>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-8 gap-2">
                         {timeSlots.map((time) => (
                           <button
                             key={time}
