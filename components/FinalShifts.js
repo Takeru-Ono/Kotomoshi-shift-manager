@@ -11,6 +11,7 @@ import { updateDoc } from "firebase/firestore";
 export default function FinalShifts({ user }) {
   const [finalShifts, setFinalShifts] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [calendarActiveStartDate, setCalendarActiveStartDate] = useState(new Date());
   const [selectedDateShifts, setSelectedDateShifts] = useState([]);
   const [todayInfo, setTodayInfo] = useState("");
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
@@ -36,22 +37,22 @@ export default function FinalShifts({ user }) {
     const fetchAllowedUsers = async () => {
       try {
         console.log("🔍 Firestore から `allowedUsers` を取得開始..."); // 🔍 デバッグログ
-  
+
         const snapshot = await getDocs(collection(db, "allowedUsers")); // Firestore の `allowedUsers` コレクションを取得
-  
+
         const users = snapshot.docs.map((doc) => ({
           email: doc.data().email, // ユーザーのメールアドレス
           displayName: doc.data().displayName || doc.data().email, // `displayName` が無い場合は `email` を代わりに使う
         }));
-  
+
         console.log("✅ `allowedUsers` 取得成功:", users); // 🔍 デバッグログ
         setRegisteredUsers(users); // ✅ State に格納
-  
+
       } catch (error) {
         console.error("❌ 許可ユーザーの取得に失敗:", error);
       }
     };
-  
+
     fetchAllowedUsers();
   }, []);
 
@@ -70,24 +71,24 @@ export default function FinalShifts({ user }) {
       console.log("現在のユーザー:", user?.email); // 🔍 現在のユーザーを確認
       setIsAdmin(adminEmails.includes(user?.email)); // 🚀 管理者なら `true` にする
     };
-  
+
     if (user) checkAdminStatus();
   }, [user]);
 
   useEffect(() => {
     const finalShiftsRef = collection(db, "finalShifts");
-  
+
     // 🔥 Firestore の変更をリアルタイムで取得
     const unsubscribe = onSnapshot(finalShiftsRef, (snapshot) => {
       const shifts = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-  
+
       // 🔽 日付順に並び替えてカレンダーに即時反映
       setFinalShifts(shifts.sort((a, b) => a.date.localeCompare(b.date)));
     });
-  
+
     return () => unsubscribe();
   }, []);
 
@@ -100,14 +101,14 @@ export default function FinalShifts({ user }) {
 
 
 
-const getTodayInfo = (date) => {
-  const formattedDate = date.toLocaleDateString("ja-JP", {
-    month: "2-digit",
-    day: "2-digit",
-  }).replace(/\//g, "-");
+  const getTodayInfo = (date) => {
+    const formattedDate = date.toLocaleDateString("ja-JP", {
+      month: "2-digit",
+      day: "2-digit",
+    }).replace(/\//g, "-");
 
-  return todayEvents[formattedDate] || { title: "??", description: "今日は特に記念日はありません" };
-};
+    return todayEvents[formattedDate] || { title: "??", description: "今日は特に記念日はありません" };
+  };
 
   const handleDateClick = (date) => {
     const formattedDate = date.toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-");
@@ -119,7 +120,7 @@ const getTodayInfo = (date) => {
   const tileContent = ({ date }) => {
     const formattedDate = date.toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-");
     const shiftsOnDate = finalShifts.filter(shift => shift.date === formattedDate);
-  
+
     return (
       <div className="text-xs text-center">
         {shiftsOnDate.map(shift => {
@@ -138,424 +139,453 @@ const getTodayInfo = (date) => {
     );
   };
 
-    // 連続した時間を `start - end` の形にまとめる関数
-    const groupConsecutiveTimes = (times) => {
-      if (times.length === 0) return [];
-    
-      // 🔹 時間を数値でソート（["13:00", "13:30", "18:00", "18:30"] → [13.0, 13.5, 18.0, 18.5]）
-      const sortedTimes = [...new Set(times)] // 重複を削除
-        .map(t => {
-          const [hour, min] = t.split(":").map(Number);
-          return hour + (min === 30 ? 0.5 : 0);
-        })
-        .sort((a, b) => a - b);
-    
-      const grouped = [];
-      let start = sortedTimes[0];
-      let prev = sortedTimes[0];
-    
-      for (let i = 1; i < sortedTimes.length; i++) {
-        if (sortedTimes[i] !== prev + 0.5) {
-          // 🔥 連続していなかったら、グループ化
-          grouped.push(`${formatTime(start)} - ${formatTime(prev + 0.5)}`);
-          start = sortedTimes[i];
-        }
-        prev = sortedTimes[i];
+  // 連続した時間を `start - end` の形にまとめる関数
+  const groupConsecutiveTimes = (times) => {
+    if (times.length === 0) return [];
+
+    // 🔹 時間を数値でソート（["13:00", "13:30", "18:00", "18:30"] → [13.0, 13.5, 18.0, 18.5]）
+    const sortedTimes = [...new Set(times)] // 重複を削除
+      .map(t => {
+        const [hour, min] = t.split(":").map(Number);
+        return hour + (min === 30 ? 0.5 : 0);
+      })
+      .sort((a, b) => a - b);
+
+    const grouped = [];
+    let start = sortedTimes[0];
+    let prev = sortedTimes[0];
+
+    for (let i = 1; i < sortedTimes.length; i++) {
+      if (sortedTimes[i] !== prev + 0.5) {
+        // 🔥 連続していなかったら、グループ化
+        grouped.push(`${formatTime(start)} - ${formatTime(prev + 0.5)}`);
+        start = sortedTimes[i];
       }
-    
-      // 最後のグループを追加
-      grouped.push(`${formatTime(start)} - ${formatTime(prev + 0.5)}`);
-    
-      return grouped;
-    };
-    
-    // 🔽 時間フォーマットを統一する関数（"9.5" → "9:30" に変換）
-    const formatTime = (time) => {
-      const hour = Math.floor(time);
-      const minute = time % 1 === 0.5 ? "30" : "00";
-      return `${hour}:${minute}`;
-    };
+      prev = sortedTimes[i];
+    }
 
-const handleDeleteFinalShift = async (shiftId) => {
-  const confirmDelete = window.confirm("この確定シフトを削除しますか？");
-  if (!confirmDelete) return;
+    // 最後のグループを追加
+    grouped.push(`${formatTime(start)} - ${formatTime(prev + 0.5)}`);
 
-  try {
-    // 🔽 Firestore からシフトを削除
-    await deleteDoc(doc(db, "finalShifts", shiftId));
+    return grouped;
+  };
 
-    // 🔥 Firestore から削除後、シフト一覧とスケジュールを即時更新
-    setFinalShifts((prev) => prev.filter((shift) => shift.id !== shiftId));
+  // 🔽 時間フォーマットを統一する関数（"9.5" → "9:30" に変換）
+  const formatTime = (time) => {
+    const hour = Math.floor(time);
+    const minute = time % 1 === 0.5 ? "30" : "00";
+    return `${hour}:${minute}`;
+  };
 
-    setSelectedDateShifts((prev) => {
-      return prev.filter((shift) => shift.id !== shiftId);
-    });
-  } catch (error) {
-    console.error("エラー:", error);
-  }
-};
+  const handleDeleteFinalShift = async (shiftId) => {
+    const confirmDelete = window.confirm("この確定シフトを削除しますか？");
+    if (!confirmDelete) return;
 
-const handleAddFinalShift = async () => {
-  if (!selectedUser || selectedTimes.length === 0) {
-    alert("ユーザーと時間を選択してください！");
-    return;
-  }
+    try {
+      // 🔽 Firestore からシフトを削除
+      await deleteDoc(doc(db, "finalShifts", shiftId));
 
-  try {
-    // 🔍 Firestore から既存の確定シフトを取得
-    const snapshot = await getDocs(collection(db, "finalShifts"));
-    const existingShifts = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+      // 🔥 Firestore から削除後、シフト一覧とスケジュールを即時更新
+      setFinalShifts((prev) => prev.filter((shift) => shift.id !== shiftId));
 
-    // 🔍 既に同じ `user` & `date` で登録されたシフトがあるか確認
-    const isDuplicate = existingShifts.some(shift =>
-      shift.user === selectedUser && shift.date === selectedDate
-    );
+      setSelectedDateShifts((prev) => {
+        return prev.filter((shift) => shift.id !== shiftId);
+      });
+    } catch (error) {
+      console.error("エラー:", error);
+    }
+  };
 
-    if (isDuplicate) {
-      alert("このユーザーはすでにこの日にシフト登録されています。");
+  const handleAddFinalShift = async () => {
+    if (!selectedUser || selectedTimes.length === 0) {
+      alert("ユーザーと時間を選択してください！");
       return;
     }
 
-    // 🔥 `displayName` を取得
-    const selectedUserData = registeredUsers.find(user => user.email === selectedUser);
-    const displayName = selectedUserData ? selectedUserData.displayName : selectedUser;
+    try {
+      // 🔍 Firestore から既存の確定シフトを取得
+      const snapshot = await getDocs(collection(db, "finalShifts"));
+      const existingShifts = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
-    // 🔽 Firestore に新規シフトを追加（**user はメールアドレスに統一！**）
-    await addDoc(collection(db, "finalShifts"), {
-      user: selectedUser, // ✅ **ここをメールアドレスにする！**
-      displayName: displayName, // ✅ `displayName` はそのまま保持
-      date: selectedDate,
-      times: selectedTimes,
-      confirmedAt: new Date(),
-      confirmedBy: user.email
-    });
+      // 🔍 既に同じ `user` & `date` で登録されたシフトがあるか確認
+      const isDuplicate = existingShifts.some(shift =>
+        shift.user === selectedUser && shift.date === selectedDate
+      );
 
-    alert("確定版シフトを追加しました！");
+      if (isDuplicate) {
+        alert("このユーザーはすでにこの日にシフト登録されています。");
+        return;
+      }
 
-    // 🔽 追加後に一覧を更新する
-    setFinalShifts(prev => [
-      ...prev,
-      {
-        id: "temp-" + new Date().getTime(),
-        user: selectedUser, // ✅ ここもメールアドレスに統一
-        displayName: displayName,
+      // 🔥 `displayName` を取得
+      const selectedUserData = registeredUsers.find(user => user.email === selectedUser);
+      const displayName = selectedUserData ? selectedUserData.displayName : selectedUser;
+
+      // 🔽 Firestore に新規シフトを追加（**user はメールアドレスに統一！**）
+      await addDoc(collection(db, "finalShifts"), {
+        user: selectedUser, // ✅ **ここをメールアドレスにする！**
+        displayName: displayName, // ✅ `displayName` はそのまま保持
         date: selectedDate,
         times: selectedTimes,
         confirmedAt: new Date(),
         confirmedBy: user.email
-      }
-    ]);
+      });
 
-    // 🔽 モーダルを閉じる
-    setShowAddShiftModal(false);
-  } catch (error) {
-    console.error("エラー:", error);
-    alert("シフトの追加に失敗しました。");
-  }
-};
+      alert("確定版シフトを追加しました！");
 
-const toggleTimeRange = (time) => {
-  const timeIdx = timeSlots.indexOf(time);
+      // 🔽 追加後に一覧を更新する
+      setFinalShifts(prev => [
+        ...prev,
+        {
+          id: "temp-" + new Date().getTime(),
+          user: selectedUser, // ✅ ここもメールアドレスに統一
+          displayName: displayName,
+          date: selectedDate,
+          times: selectedTimes,
+          confirmedAt: new Date(),
+          confirmedBy: user.email
+        }
+      ]);
 
-  if (selectedTimes.includes(time)) {
-    // 🔹 既に選択されているボタンをタップ → 解除
-    setSelectedTimes(selectedTimes.filter((t) => t !== time));
-    return;
-  }
-
-  if (startTime === null) {
-    // 🔹 1回目のタップ（新しいスタート）
-    setStartTime(time);
-    setSelectedTimes([...selectedTimes, time]); // 選択状態にする
-  } else {
-    const startIdx = timeSlots.indexOf(startTime);
-
-    if (timeIdx === startIdx + 1) {
-      // 🔥 連続するボタンを押した場合、そのまま追加
-      setSelectedTimes([...selectedTimes, time]);
-      setStartTime(time);
-    } else if (timeIdx > startIdx + 1) {
-      // 🔹 未来の時間をタップした場合（範囲選択）
-      const newSelection = timeSlots.slice(startIdx, timeIdx + 1);
-      setSelectedTimes([...selectedTimes, ...newSelection]);
-      setStartTime(null); // スタートリセット
-    } else {
-      // 🔹 過去の時間をタップした場合、その時間だけ追加（間のボタンは選択しない）
-      setSelectedTimes([...selectedTimes, time]);
-      setStartTime(time);
+      // 🔽 モーダルを閉じる
+      setShowAddShiftModal(false);
+    } catch (error) {
+      console.error("エラー:", error);
+      alert("シフトの追加に失敗しました。");
     }
-  }
-};
+  };
 
-const handleEditShift = (shift) => {
-  setEditingShift(shift);
-  setEditedTimes(shift.times); // 既存の時間をセット
-  setAdminComment(shift.adminComment || ""); // 既存コメントをセット
-  setShowEditShiftModal(true);
-};
+  const toggleTimeRange = (time) => {
+    const timeIdx = timeSlots.indexOf(time);
 
-const handleSaveShiftEdit = async () => {
-  if (!editingShift) return;
+    if (selectedTimes.includes(time)) {
+      // 🔹 既に選択されているボタンをタップ → 解除
+      setSelectedTimes(selectedTimes.filter((t) => t !== time));
+      return;
+    }
 
-  try {
-    const shiftRef = doc(db, "finalShifts", editingShift.id);
-    await updateDoc(shiftRef, {
-      times: editedTimes,
-      adminComment: adminComment,
+    if (startTime === null) {
+      // 🔹 1回目のタップ（新しいスタート）
+      setStartTime(time);
+      setSelectedTimes([...selectedTimes, time]); // 選択状態にする
+    } else {
+      const startIdx = timeSlots.indexOf(startTime);
+
+      if (timeIdx === startIdx + 1) {
+        // 🔥 連続するボタンを押した場合、そのまま追加
+        setSelectedTimes([...selectedTimes, time]);
+        setStartTime(time);
+      } else if (timeIdx > startIdx + 1) {
+        // 🔹 未来の時間をタップした場合（範囲選択）
+        const newSelection = timeSlots.slice(startIdx, timeIdx + 1);
+        setSelectedTimes([...selectedTimes, ...newSelection]);
+        setStartTime(null); // スタートリセット
+      } else {
+        // 🔹 過去の時間をタップした場合、その時間だけ追加（間のボタンは選択しない）
+        setSelectedTimes([...selectedTimes, time]);
+        setStartTime(time);
+      }
+    }
+  };
+
+  const handleEditShift = (shift) => {
+    setEditingShift(shift);
+    setEditedTimes(shift.times); // 既存の時間をセット
+    setAdminComment(shift.adminComment || ""); // 既存コメントをセット
+    setShowEditShiftModal(true);
+  };
+
+  const handleSaveShiftEdit = async () => {
+    if (!editingShift) return;
+
+    try {
+      const shiftRef = doc(db, "finalShifts", editingShift.id);
+      await updateDoc(shiftRef, {
+        times: editedTimes,
+        adminComment: adminComment,
+      });
+
+      alert("シフトを更新しました！");
+
+      // 🔽 編集モーダルを閉じる（Firestoreのリアルタイムリスナーが反映してくれる）
+      setShowEditShiftModal(false);
+    } catch (error) {
+      console.error("エラー:", error);
+      alert("シフトの更新に失敗しました。");
+    }
+  };
+
+  useEffect(() => {
+    const finalShiftsRef = collection(db, "finalShifts");
+
+    // 🔥 Firestore の変更をリアルタイムで取得
+    const unsubscribe = onSnapshot(finalShiftsRef, (snapshot) => {
+      const shifts = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // 🔽 日付順に並び替えてカレンダーに即時反映
+      setFinalShifts(shifts.sort((a, b) => a.date.localeCompare(b.date)));
     });
 
-    alert("シフトを更新しました！");
-
-    // 🔽 編集モーダルを閉じる（Firestoreのリアルタイムリスナーが反映してくれる）
-    setShowEditShiftModal(false);
-  } catch (error) {
-    console.error("エラー:", error);
-    alert("シフトの更新に失敗しました。");
-  }
-};
-
-useEffect(() => {
-  const finalShiftsRef = collection(db, "finalShifts");
-
-  // 🔥 Firestore の変更をリアルタイムで取得
-  const unsubscribe = onSnapshot(finalShiftsRef, (snapshot) => {
-    const shifts = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    // 🔽 日付順に並び替えてカレンダーに即時反映
-    setFinalShifts(shifts.sort((a, b) => a.date.localeCompare(b.date)));
-  });
-
-  return () => unsubscribe();
-}, []);
+    return () => unsubscribe();
+  }, []);
 
 
-return (
-  <div className="relative w-full max-w-screen-2xl mx-auto p-4 border rounded-lg shadow-md bg-white">
-    
-    {/* 🔽 上段：カレンダー & 時刻表 */}
-    <div className="flex gap-6 overflow-hidden">
-      
-      {/* 🔽 カレンダー (w-2/3) */}
-      <div className="w-full md:w-1/2 flex flex-col">
-        <h2 className="text-lg font-bold mb-4">確定版シフト</h2>
+  return (
+    <div className="relative w-full max-w-screen-2xl mx-auto p-4 border rounded-lg shadow-md bg-white">
 
-        <div className="p-4 border rounded shadow-md w-full">
-          <Calendar 
-            tileContent={tileContent} 
-            onClickDay={handleDateClick} 
-            className="w-full h-full"
-            locale="ja-JP"
-          />
-        </div>
+      {/* 🔽 上段：カレンダー & 時刻表 */}
+      <div className="flex gap-6 overflow-hidden">
 
-        {/* 🔽 下段：確定版シフトリスト */}
-        {selectedDate && (
-          <div className="w-full mt-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold">
-                {selectedDate}
-                <span className="text-sm font-normal ml-2">
-                  {todayInfo.title && ` は${todayInfo.title} `}
-                </span>
-              </h3>
+        {/* 🔽 カレンダー (w-2/3) */}
+        <div className="w-full md:w-1/2 flex flex-col">
+          <h2 className="text-lg font-bold mb-4">確定版シフト</h2>
 
-              {/* 🔥 管理者だけ `+` ボタンを表示 */}
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    console.log("＋ボタンがクリックされました！"); 
-                    setShowAddShiftModal(true);
-                  }}
-                  className="bg-blue-500 text-white px-3 py-1 rounded-full text-lg"
-                >
-                  ＋
-                </button>
-              )}
-            </div>
-
-            <h3 className="font-bold mt-4">確定シフト一覧</h3>
-            <ul className="w-full">
-              {selectedDateShifts.map((shift) => {
-                const groupedTimes = groupConsecutiveTimes(shift.times);
-                return (
-                  <li
-                    key={shift.id}
-                    className="border p-2 my-2 shadow-sm flex flex-wrap items-center gap-4 w-full cursor-pointer hover:bg-gray-100 transition"
-                  >
-                    {/* ✅ ユーザー名 */}
-                    <span className="text-sm text-gray-600 min-w-[150px]">
-                      {shift.displayName || shift.user}
-                    </span>
-                    
-                    {/* ✅ 時間帯 */}
-                    <span className="flex-1 whitespace-normal break-words">
-                      {groupedTimes.join(", ")}
-                    </span>
-
-                    {/* ✅ 管理者コメントがあれば表示 */}
-                    {shift.adminComment && (
-                      <span className="text-xs text-gray-500">{shift.adminComment}</span>
-                    )}
-
-                    {/* 🔽 編集ボタン（管理者のみ） */}
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleEditShift(shift)}
-                        className="bg-yellow-500 text-white p-1 rounded text-sm min-w-[80px] text-center"
-                      >
-                        編集
-                      </button>
-                    )}
-
-                    {/* 🔽 削除ボタン（管理者のみ） */}
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleDeleteFinalShift(shift.id)}
-                        className="bg-red-500 text-white p-1 rounded text-sm min-w-[80px] text-center"
-                      >
-                        削除
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+          <div className="p-4 border rounded shadow-md w-full">
+            <Calendar
+              tileContent={tileContent}
+              onClickDay={handleDateClick}
+              className="w-full h-full"
+              locale="ja-JP"
+              onActiveStartDateChange={({ activeStartDate }) => setCalendarActiveStartDate(activeStartDate)}
+              activeStartDate={calendarActiveStartDate}
+            />
           </div>
-        )}
-      </div>
 
-      {/* 🔽 右側：時刻表 */}
-      <div className="border-l pl-6 min-w-[220px] w-1/2">
-        <h3 className="font-bold mb-2">{selectedDate}</h3>
-        <div className="relative left-10 w-full h-[770px]">
-          {timeSlots.map((time) => {
-            const shiftsAtTime = selectedDateShifts.filter(shift => shift.times.includes(time));
+          {/* 🔽 下段：確定版シフトリスト */}
+          {selectedDate && (
+            <div className="w-full mt-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold">
+                  {selectedDate}
+                  <span className="text-sm font-normal ml-2">
+                    {todayInfo.title && ` は${todayInfo.title} `}
+                  </span>
+                </h3>
 
-            return (
-              <div key={time} className="relative flex items-center h-[30px] cursor-pointer">
-                {/* 時間ラベル */}
-                <span className="absolute -left-8 text-sm">{time}</span>
+                {/* 🔥 管理者だけ `+` ボタンを表示 */}
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      console.log("＋ボタンがクリックされました！");
+                      setShowAddShiftModal(true);
+                    }}
+                    className="bg-blue-500 text-white px-3 py-1 rounded-full text-lg"
+                  >
+                    ＋
+                  </button>
+                )}
+              </div>
 
-                {/* 時間を区切る線 */}
-                <div className="absolute left-[60px] top-3 w-full h-[1px] bg-gray-400 transform -translate-y-1/2"></div>
-
-                {/* 🔽 複数人のシフトを 20% 幅で配置 */}
-                {shiftsAtTime.map((shift, shiftIndex) => {
-                  const shiftWidth = "20%"; 
-                  const shiftLeft = `calc(60px + ${shiftIndex * 20}%)`; 
-
+              <h3 className="font-bold mt-4">確定シフト一覧</h3>
+              <ul className="w-full">
+                {selectedDateShifts.map((shift) => {
+                  const groupedTimes = groupConsecutiveTimes(shift.times);
                   return (
-                    <div
+                    <li
                       key={shift.id}
-                      className="absolute top-3 h-full flex items-center justify-center text-white text-xs rounded"
-                      style={{
-                        backgroundColor: getUserColor(shift.user),
-                        left: shiftLeft,
-                        width: shiftWidth,
-                      }}
+                      className="border p-2 my-2 shadow-sm flex flex-wrap items-center gap-4 w-full cursor-pointer hover:bg-gray-100 transition"
                     >
-                      {shift.displayName}
-                    </div>
+                      {/* ✅ ユーザー名 */}
+                      <span className="text-sm text-gray-600 min-w-[150px]">
+                        {shift.displayName || shift.user}
+                      </span>
+
+                      {/* ✅ 時間帯 */}
+                      <span className="flex-1 whitespace-normal break-words">
+                        {groupedTimes.join(", ")}
+                      </span>
+
+                      {/* ✅ 管理者コメントがあれば表示 */}
+                      {shift.adminComment && (
+                        <span className="text-xs text-gray-500">{shift.adminComment}</span>
+                      )}
+
+                      {/* 🔽 編集ボタン（管理者のみ） */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleEditShift(shift)}
+                          className="bg-yellow-500 text-white p-1 rounded text-sm min-w-[80px] text-center"
+                        >
+                          編集
+                        </button>
+                      )}
+
+                      {/* 🔽 削除ボタン（管理者のみ） */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDeleteFinalShift(shift.id)}
+                          className="bg-red-500 text-white p-1 rounded text-sm min-w-[80px] text-center"
+                        >
+                          削除
+                        </button>
+                      )}
+                    </li>
                   );
                 })}
-              </div>
-            );
-          })}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* 🔽 右側：時刻表 */}
+        <div className="border-l pl-6 min-w-[220px] w-1/2">
+          {/* Discord送信ボタン */}
+          <button
+            className="mb-4 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded shadow transition"
+            onClick={async () => {
+              if (!(calendarActiveStartDate instanceof Date) || isNaN(calendarActiveStartDate)) {
+                alert("カレンダーの月情報が取得できません。");
+                return;
+              }
+              const year = Number(calendarActiveStartDate.getFullYear());
+              const month = Number(calendarActiveStartDate.getMonth() + 1);
+              try {
+                const res = await fetch("/api/sendFinalShiftToDiscord", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ year, month }),
+                });
+                const data = await res.json();
+                if (res.ok) {
+                  alert("Discord送信成功！");
+                } else {
+                  alert("エラー: " + (data.error || "送信失敗"));
+                }
+              } catch (e) {
+                alert("API通信エラー: " + e.message);
+              }
+            }}
+          >
+            Discord送信
+          </button>
+          <h3 className="font-bold mb-2">{selectedDate}</h3>
+          <div className="relative left-10 w-full h-[770px]">
+            {timeSlots.map((time) => {
+              const shiftsAtTime = selectedDateShifts.filter(shift => shift.times.includes(time));
+
+              return (
+                <div key={time} className="relative flex items-center h-[30px] cursor-pointer">
+                  {/* 時間ラベル */}
+                  <span className="absolute -left-8 text-sm">{time}</span>
+
+                  {/* 時間を区切る線 */}
+                  <div className="absolute left-[60px] top-3 w-full h-[1px] bg-gray-400 transform -translate-y-1/2"></div>
+
+                  {/* 🔽 複数人のシフトを 20% 幅で配置 */}
+                  {shiftsAtTime.map((shift, shiftIndex) => {
+                    const shiftWidth = "20%";
+                    const shiftLeft = `calc(60px + ${shiftIndex * 20}%)`;
+
+                    return (
+                      <div
+                        key={shift.id}
+                        className="absolute top-3 h-full flex items-center justify-center text-white text-xs rounded"
+                        style={{
+                          backgroundColor: getUserColor(shift.user),
+                          left: shiftLeft,
+                          width: shiftWidth,
+                        }}
+                      >
+                        {shift.displayName}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
+
+      {/* 🔽 モーダルの内容をアプリ全体の `GlobalModal` に渡す */}
+      {showAddShiftModal && (
+        <GlobalModal isOpen={showAddShiftModal} onClose={() => setShowAddShiftModal(false)}>
+          <h3 className="text-xl font-bold mb-4">確定版シフトを追加</h3>
+
+          {/* ユーザー選択 */}
+          <select
+            className="p-2 border rounded w-full"
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+          >
+            <option value="">ユーザーを選択</option>
+            {registeredUsers.map((user, index) => (
+              <option key={user.email || index} value={user.email}>
+                {user.displayName}
+              </option>
+            ))}
+          </select>
+
+          {/* 時間選択 */}
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            {timeSlots.map((time) => (
+              <button
+                key={time}
+                onClick={() => toggleTimeRange(time)}
+                className={`p-2 rounded w-full ${selectedTimes.includes(time) ? "bg-blue-500 text-white" : "bg-gray-200"
+                  }`}
+              >
+                {time}〜
+              </button>
+            ))}
+          </div>
+
+          {/* シフト登録ボタン */}
+          <button
+            onClick={handleAddFinalShift}
+            className="mt-4 bg-green-500 text-white p-2 rounded w-full"
+          >
+            シフトを確定版に登録
+          </button>
+        </GlobalModal>
+      )}
+
+      {showEditShiftModal && (
+        <GlobalModal isOpen={showEditShiftModal} onClose={() => setShowEditShiftModal(false)}>
+          <h3 className="text-xl font-bold mb-4">確定版シフトを編集</h3>
+
+          {/* 🔽 時間選択 */}
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            {timeSlots.map((time) => (
+              <button
+                key={time}
+                onClick={() =>
+                  setEditedTimes((prev) =>
+                    prev.includes(time) ? prev.filter((t) => t !== time) : [...prev, time]
+                  )
+                }
+                className={`p-2 rounded w-full ${editedTimes.includes(time) ? "bg-blue-500 text-white" : "bg-gray-200"
+                  }`}
+              >
+                {time}〜
+              </button>
+            ))}
+          </div>
+
+          {/* 🔽 管理者コメント入力 */}
+          <textarea
+            className="p-2 border rounded w-full mt-2"
+            placeholder="管理者コメントを入力..."
+            value={adminComment}
+            onChange={(e) => setAdminComment(e.target.value)}
+          ></textarea>
+
+          {/* 🔽 保存ボタン */}
+          <button
+            onClick={handleSaveShiftEdit}
+            className="mt-4 bg-green-500 text-white p-2 rounded w-full"
+          >
+            シフトを更新
+          </button>
+
+        </GlobalModal>
+      )}
     </div>
-
-   {/* 🔽 モーダルの内容をアプリ全体の `GlobalModal` に渡す */}
-{showAddShiftModal && (
-  <GlobalModal isOpen={showAddShiftModal} onClose={() => setShowAddShiftModal(false)}>
-    <h3 className="text-xl font-bold mb-4">確定版シフトを追加</h3>
-
-    {/* ユーザー選択 */}
-    <select
-      className="p-2 border rounded w-full"
-      value={selectedUser}
-      onChange={(e) => setSelectedUser(e.target.value)}
-    >
-      <option value="">ユーザーを選択</option>
-      {registeredUsers.map((user, index) => (
-        <option key={user.email || index} value={user.email}>
-          {user.displayName}
-        </option>
-      ))}
-    </select>
-
-    {/* 時間選択 */}
-    <div className="grid grid-cols-4 gap-2 mt-2">
-      {timeSlots.map((time) => (
-        <button
-          key={time}
-          onClick={() => toggleTimeRange(time)}
-          className={`p-2 rounded w-full ${
-            selectedTimes.includes(time) ? "bg-blue-500 text-white" : "bg-gray-200"
-          }`}
-        >
-          {time}〜
-        </button>
-      ))}
-    </div>
-
-    {/* シフト登録ボタン */}
-    <button
-      onClick={handleAddFinalShift}
-      className="mt-4 bg-green-500 text-white p-2 rounded w-full"
-    >
-      シフトを確定版に登録
-    </button>
-  </GlobalModal>
-)}
-
-{showEditShiftModal && (
-  <GlobalModal isOpen={showEditShiftModal} onClose={() => setShowEditShiftModal(false)}>
-    <h3 className="text-xl font-bold mb-4">確定版シフトを編集</h3>
-
-    {/* 🔽 時間選択 */}
-    <div className="grid grid-cols-4 gap-2 mt-2">
-      {timeSlots.map((time) => (
-        <button
-          key={time}
-          onClick={() =>
-            setEditedTimes((prev) =>
-              prev.includes(time) ? prev.filter((t) => t !== time) : [...prev, time]
-            )
-          }
-          className={`p-2 rounded w-full ${
-            editedTimes.includes(time) ? "bg-blue-500 text-white" : "bg-gray-200"
-          }`}
-        >
-          {time}〜
-        </button>
-      ))}
-    </div>
-
-    {/* 🔽 管理者コメント入力 */}
-    <textarea
-      className="p-2 border rounded w-full mt-2"
-      placeholder="管理者コメントを入力..."
-      value={adminComment}
-      onChange={(e) => setAdminComment(e.target.value)}
-    ></textarea>
-
-    {/* 🔽 保存ボタン */}
-    <button
-      onClick={handleSaveShiftEdit}
-      className="mt-4 bg-green-500 text-white p-2 rounded w-full"
-    >
-      シフトを更新
-    </button>
-
-  </GlobalModal>
-)}
-  </div>
-);
+  );
 }

@@ -2,15 +2,18 @@
   "name": "shift-manager",
   "version": "0.1.0",
   "private": true,
-"scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "export": "next build && next export",
-  "start": "next start"
-},
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "export": "next build && next export",
+    "start": "next start"
+  },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@opentelemetry/api": "^1.9.0",
+    "canvas": "^3.1.0",
     "firebase": "^11.3.1",
+    "firebase-admin": "^13.4.0",
     "next": "15.1.7",
     "react": "^19.0.0",
     "react-calendar": "^5.1.0",
