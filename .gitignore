@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Google Sheets credentials
+inbound-bee-457314-n1-9ba035ba7d85.json
+
 # dependencies
 /node_modules
 /.pnp

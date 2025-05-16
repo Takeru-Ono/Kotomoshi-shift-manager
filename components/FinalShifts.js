@@ -7,7 +7,6 @@ import todayEvents from "../data/todayEvents"; // ✅ データファイルを�
 import GlobalModal from "../components/GlobalModal";
 import { updateDoc } from "firebase/firestore";
 
-
 export default function FinalShifts({ user }) {
   const [finalShifts, setFinalShifts] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -24,14 +23,12 @@ export default function FinalShifts({ user }) {
   const [adminComment, setAdminComment] = useState("");
   const [startTime, setStartTime] = useState(null); // 範囲選択の開始時間
 
-
   const timeSlots = Array.from({ length: 25 }, (_, i) => {
     const hour = 9 + Math.floor(i / 2);  // 9時からスタート
     const minute = i % 2 === 0 ? "00" : "30"; // 00分か30分
     return `${hour}:${minute}`;
   });
   const [isAdmin, setIsAdmin] = useState(false);
-
 
   useEffect(() => {
     const fetchAllowedUsers = async () => {
@@ -55,7 +52,6 @@ export default function FinalShifts({ user }) {
 
     fetchAllowedUsers();
   }, []);
-
 
   useEffect(() => {
     const fetchFinalShifts = async () => {
@@ -98,8 +94,6 @@ export default function FinalShifts({ user }) {
     const hue = (hash % 330) + 30; // 30〜360の間で色相を生成（赤を除外）
     return `hsl(${hue}, 70%, 60%)`; // 彩度と明度を調整
   };
-
-
 
   const getTodayInfo = (date) => {
     const formattedDate = date.toLocaleDateString("ja-JP", {
@@ -335,7 +329,6 @@ export default function FinalShifts({ user }) {
     return () => unsubscribe();
   }, []);
 
-
   return (
     <div className="relative w-full max-w-screen-2xl mx-auto p-4 border rounded-lg shadow-md bg-white">
 
@@ -435,35 +428,67 @@ export default function FinalShifts({ user }) {
 
         {/* 🔽 右側：時刻表 */}
         <div className="border-l pl-6 min-w-[220px] w-1/2">
-          {/* Discord送信ボタン */}
-          <button
-            className="mb-4 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded shadow transition"
-            onClick={async () => {
-              if (!(calendarActiveStartDate instanceof Date) || isNaN(calendarActiveStartDate)) {
-                alert("カレンダーの月情報が取得できません。");
-                return;
-              }
-              const year = Number(calendarActiveStartDate.getFullYear());
-              const month = Number(calendarActiveStartDate.getMonth() + 1);
-              try {
-                const res = await fetch("/api/sendFinalShiftToDiscord", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ year, month }),
-                });
-                const data = await res.json();
-                if (res.ok) {
-                  alert("Discord送信成功！");
-                } else {
-                  alert("エラー: " + (data.error || "送信失敗"));
+          {/* Discord送信ボタン & シート反映ボタン */}
+          <div className="flex gap-2 mb-4">
+            <button
+              className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded shadow transition"
+              onClick={async () => {
+                if (!(calendarActiveStartDate instanceof Date) || isNaN(calendarActiveStartDate)) {
+                  alert("カレンダーの月情報が取得できません。");
+                  return;
                 }
-              } catch (e) {
-                alert("API通信エラー: " + e.message);
-              }
-            }}
-          >
-            Discord送信
-          </button>
+                const year = Number(calendarActiveStartDate.getFullYear());
+                const month = Number(calendarActiveStartDate.getMonth() + 1);
+                try {
+                  const res = await fetch("/api/sendFinalShiftToDiscord", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ year, month }),
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    alert("Discord送信成功！");
+                  } else {
+                    alert("エラー: " + (data.error || "送信失敗"));
+                  }
+                } catch (e) {
+                  alert("API通信エラー: " + e.message);
+                }
+              }}
+            >
+              Discord送信
+            </button>
+            <button
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow transition"
+              onClick={async () => {
+                if (!(calendarActiveStartDate instanceof Date) || isNaN(calendarActiveStartDate)) {
+                  alert("カレンダーの月情報が取得できません。");
+                  return;
+                }
+                const year = Number(calendarActiveStartDate.getFullYear());
+                const month = Number(calendarActiveStartDate.getMonth() + 1);
+                try {
+                  const res = await fetch("/api/sendFinalShiftToSheet", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ year, month }),
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    alert(
+                      "Googleスプレッドシート反映成功！"
+                    );
+                  } else {
+                    alert("エラー: " + (data.error || "反映失敗"));
+                  }
+                } catch (e) {
+                  alert("API通信エラー: " + e.message);
+                }
+              }}
+            >
+              シートに反映
+            </button>
+          </div>
           <h3 className="font-bold mb-2">{selectedDate}</h3>
           <div className="relative left-10 w-full h-[770px]">
             {timeSlots.map((time) => {
