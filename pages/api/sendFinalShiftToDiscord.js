@@ -58,39 +58,8 @@ export default async function handler(req, res) {
   }
 
   // shiftDataを画像化
-  const { createCanvas } = require("canvas");
-  const canvasWidth = 900;
-  const canvasHeight = 80 + shiftData.length * 32;
-  const canvas = createCanvas(canvasWidth, canvasHeight);
-  const ctx = canvas.getContext("2d");
-
-  // 背景
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-  // タイトル
-  ctx.fillStyle = "#222";
-  ctx.font = "bold 32px sans-serif";
-  ctx.fillText(`${year}年${month}月 シフト表`, 40, 60);
-
-  // shiftDataをテキストで描画（各日付・担当者・時間帯）
-  ctx.font = "20px sans-serif";
-  let y = 110;
-  if (shiftData.length > 0) {
-    shiftData.forEach((item) => {
-      ctx.fillText(
-        `${item.date} ${item.displayName || item.user} ${Array.isArray(item.times) ? item.times.join(", ") : ""}`,
-        40,
-        y
-      );
-      y += 32;
-    });
-  } else {
-    ctx.fillText("データがありません", 40, y);
-  }
-
-  // PNGバッファ生成
-  const imageBuffer = canvas.toBuffer("image/png");
+  const { generateShiftImage } = require("../../lib/generateShiftImage");
+  const imageBuffer = generateShiftImage(shiftData, year, month);
 
   // Discordに画像送信
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
