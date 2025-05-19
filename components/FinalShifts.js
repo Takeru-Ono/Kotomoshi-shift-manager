@@ -433,6 +433,7 @@ export default function FinalShifts({ user }) {
             <button
               className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded shadow transition"
               onClick={async () => {
+                if (!window.confirm("Discordに送信していいでしょうか！？")) return;
                 if (!(calendarActiveStartDate instanceof Date) || isNaN(calendarActiveStartDate)) {
                   alert("カレンダーの月情報が取得できません。");
                   return;
@@ -461,6 +462,7 @@ export default function FinalShifts({ user }) {
             <button
               className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow transition"
               onClick={async () => {
+                if (!window.confirm("日報に反映しても良いでしょうか？！")) return;
                 if (!(calendarActiveStartDate instanceof Date) || isNaN(calendarActiveStartDate)) {
                   alert("カレンダーの月情報が取得できません。");
                   return;
