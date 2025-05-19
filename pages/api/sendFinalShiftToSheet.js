@@ -1,3 +1,7 @@
+import admin from "firebase-admin";
+import { google } from "googleapis";
+import path from "path";
+
 // pages/api/sendFinalShiftToSheet.js
 
 // TODO: Google Sheets API連携のための認証・設定を追加
@@ -11,7 +15,6 @@ export default async function handler(req, res) {
     const { year, month } = req.body;
 
     // Firebase Admin SDK 初期化
-    const admin = require("firebase-admin");
     if (!admin.apps.length) {
         admin.initializeApp({
             credential: admin.credential.cert({
@@ -50,8 +53,6 @@ export default async function handler(req, res) {
     }
 
     // Google Sheets API認証セットアップ
-    const { google } = require("googleapis");
-    const path = require("path");
     const sheets = google.sheets("v4");
     const credentialsPath = path.join(process.cwd(), "inbound-bee-457314-n1-9ba035ba7d85.json");
     const auth = new google.auth.GoogleAuth({
@@ -198,9 +199,8 @@ export default async function handler(req, res) {
     });
 
     // Google Sheetsへ一括書き込み
-    let batchUpdateResult = null;
     try {
-        batchUpdateResult = await sheets.spreadsheets.values.batchUpdate({
+        await sheets.spreadsheets.values.batchUpdate({
             spreadsheetId,
             auth: authClient,
             requestBody: {
@@ -214,29 +214,25 @@ export default async function handler(req, res) {
     }
 
     // 書き込んだセルの値を即時取得して返す
-    let verifyValues = null;
     try {
-        const verifyRes = await sheets.spreadsheets.values.batchGet({
+        await sheets.spreadsheets.values.batchGet({
             spreadsheetId,
             auth: authClient,
             ranges: updates.map(u => u.range)
         });
-        verifyValues = verifyRes.data.valueRanges;
     } catch (e) {
-        verifyValues = { error: e.message };
+        // ignore
     }
 
     // シート全体の状態も取得して返す
-    let sheetSnapshot = null;
     try {
-        const snapRes = await sheets.spreadsheets.values.get({
+        await sheets.spreadsheets.values.get({
             spreadsheetId,
             auth: authClient,
             range: `${sheetName}!A1:H20`
         });
-        sheetSnapshot = snapRes.data.values;
     } catch (e) {
-        sheetSnapshot = { error: e.message };
+        // ignore
     }
 
     res.status(200).json({

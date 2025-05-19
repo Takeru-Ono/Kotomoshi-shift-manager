@@ -486,7 +486,7 @@ export default function FinalShifts({ user }) {
                 }
               }}
             >
-              シートに反映
+              日報に反映
             </button>
           </div>
           <h3 className="font-bold mb-2">{selectedDate}</h3>
