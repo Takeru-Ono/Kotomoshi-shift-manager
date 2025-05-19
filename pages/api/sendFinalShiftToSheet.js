@@ -59,13 +59,13 @@ export default async function handler(req, res) {
     }
 
     // Google Sheets API認証セットアップ
-    const sheets = google.sheets("v4");
-    const credentialsPath = path.join(process.cwd(), "inbound-bee-457314-n1-9ba035ba7d85.json");
-    const auth = new google.auth.GoogleAuth({
-        keyFile: credentialsPath,
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-    const authClient = await auth.getClient();
+    const sheetsAuth = new google.auth.JWT(
+        process.env.GOOGLE_CLIENT_EMAIL,
+        undefined,
+        Buffer.from(process.env.GOOGLE_PRIVATE_KEY_B64 || "", "base64").toString("utf-8"),
+        ["https://www.googleapis.com/auth/spreadsheets"]
+    );
+    const sheets = google.sheets({ version: "v4", auth: sheetsAuth });
 
     // スプレッドシートIDとシート名を設定
     const spreadsheetId = process.env.SPREADSHEET_ID;
@@ -77,7 +77,7 @@ export default async function handler(req, res) {
         const getRes = await sheets.spreadsheets.values.get({
             spreadsheetId,
             range: `${sheetName}!A1:AK10`,
-            auth: authClient,
+            auth: sheetsAuth,
         });
         sheetValues = getRes.data.values || [];
     } catch (error) {
@@ -215,7 +215,7 @@ export default async function handler(req, res) {
     try {
         await sheets.spreadsheets.values.batchClear({
             spreadsheetId,
-            auth: authClient,
+            auth: sheetsAuth,
             requestBody: {
                 ranges: clearRanges
             }
@@ -229,7 +229,7 @@ export default async function handler(req, res) {
     try {
         await sheets.spreadsheets.values.batchUpdate({
             spreadsheetId,
-            auth: authClient,
+            auth: sheetsAuth,
             requestBody: {
                 valueInputOption: "USER_ENTERED",
                 data: updates
@@ -244,7 +244,7 @@ export default async function handler(req, res) {
     try {
         await sheets.spreadsheets.values.batchGet({
             spreadsheetId,
-            auth: authClient,
+            auth: sheetsAuth,
             ranges: updates.map(u => u.range)
         });
     } catch {
@@ -255,7 +255,7 @@ export default async function handler(req, res) {
     try {
         await sheets.spreadsheets.values.get({
             spreadsheetId,
-            auth: authClient,
+            auth: sheetsAuth,
             range: `${sheetName}!A1:H20`
         });
     } catch {
