@@ -19,6 +19,7 @@ export default async function handler(req, res) {
         "base64"
     ).toString("utf-8");
 
+
     // Firebase Admin SDK 初期化
     if (!admin.apps.length) {
         admin.initializeApp({
