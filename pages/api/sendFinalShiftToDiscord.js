@@ -25,22 +25,17 @@ export default async function handler(req, res) {
     }
 
     // Firebase Admin SDK 初期化
-    let privateKey = "";
-    if (process.env.FIREBASE_PRIVATE_KEY_B64) {
-      // Base64 decode if B64 env var is set
-      privateKey = Buffer.from(process.env.FIREBASE_PRIVATE_KEY_B64, "base64").toString("utf-8");
-    } else if (process.env.FIREBASE_PRIVATE_KEY) {
-      // Replace \n with newlines for standard env var
-      privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
-    }
-
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert({
           type: process.env.FIREBASE_TYPE,
           project_id: process.env.FIREBASE_PROJECT_ID,
           private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-          private_key,
+          private_key: process.env.FIREBASE_PRIVATE_KEY_B64
+            ? Buffer.from(process.env.FIREBASE_PRIVATE_KEY_B64, "base64").toString("utf-8")
+            : process.env.FIREBASE_PRIVATE_KEY
+              ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+              : undefined,
           client_email: process.env.FIREBASE_CLIENT_EMAIL,
           client_id: process.env.FIREBASE_CLIENT_ID,
           auth_uri: process.env.FIREBASE_AUTH_URI,
