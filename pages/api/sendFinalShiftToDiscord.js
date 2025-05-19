@@ -1,5 +1,10 @@
 // pages/api/sendFinalShiftToDiscord.js
 
+import admin from "firebase-admin";
+import { generateShiftImage } from "../../lib/generateShiftImage";
+import FormData from "form-data";
+import fetch from "node-fetch";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -19,7 +24,6 @@ export default async function handler(req, res) {
   }
 
   // Firebase Admin SDK 初期化
-  const admin = require("firebase-admin");
   if (!admin.apps.length) {
     admin.initializeApp({
       credential: admin.credential.cert({
@@ -58,7 +62,6 @@ export default async function handler(req, res) {
   }
 
   // shiftDataを画像化
-  const { generateShiftImage } = require("../../lib/generateShiftImage");
   const imageBuffer = generateShiftImage(shiftData, year, month);
 
   // Discordに画像送信
@@ -69,8 +72,6 @@ export default async function handler(req, res) {
   }
 
   // multipart/form-data送信
-  const FormData = require("form-data");
-  const fetch = require("node-fetch");
   const form = new FormData();
   form.append("file", imageBuffer, {
     filename: `${year}-${monthStr}-shift.png`,

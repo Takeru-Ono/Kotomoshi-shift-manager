@@ -198,6 +198,27 @@ export default async function handler(req, res) {
         }
     });
 
+    // まずC3:AM10の偶数列（C, E, G, ..., AM）をクリア
+    const clearRanges = [];
+    const colLetters = [
+        "C", "E", "G", "I", "K", "M", "O", "Q", "S", "U", "W", "Y", "AA", "AC", "AE", "AG", "AI", "AK", "AM"
+    ];
+    colLetters.forEach(col => {
+        clearRanges.push(`${sheetName}!${col}3:${col}10`);
+    });
+    try {
+        await sheets.spreadsheets.values.batchClear({
+            spreadsheetId,
+            auth: authClient,
+            requestBody: {
+                ranges: clearRanges
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: "シートクリアに失敗しました", details: error.message, clearRanges });
+        return;
+    }
+
     // Google Sheetsへ一括書き込み
     try {
         await sheets.spreadsheets.values.batchUpdate({
@@ -220,7 +241,7 @@ export default async function handler(req, res) {
             auth: authClient,
             ranges: updates.map(u => u.range)
         });
-    } catch (e) {
+    } catch {
         // ignore
     }
 
@@ -231,7 +252,7 @@ export default async function handler(req, res) {
             auth: authClient,
             range: `${sheetName}!A1:H20`
         });
-    } catch (e) {
+    } catch {
         // ignore
     }
 
