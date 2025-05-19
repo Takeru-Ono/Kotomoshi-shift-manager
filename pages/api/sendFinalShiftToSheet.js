@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     const authClient = await auth.getClient();
 
     // スプレッドシートIDとシート名を設定
-    const spreadsheetId = "15MimUZ5DM0RGAjIqGWtNApGxftC_MQZ9y0eyV4gemGc";
+    const spreadsheetId = process.env.SPREADSHEET_ID;
     const sheetName = `${year}${monthStr}`; // 例: 202505
 
     // シートの先頭部分（A1:AK10）を取得して名前・日付の位置を特定
