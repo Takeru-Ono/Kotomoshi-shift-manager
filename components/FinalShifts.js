@@ -427,7 +427,7 @@ export default function FinalShifts({ user }) {
         </div>
 
         {/* 🔽 右側：時刻表 */}
-        <div className="border-l pl-6 min-w-[220px] w-1/2">
+        <div className="border-l pl-6 min-w-[220px] w-1/2 min-h-[200px]">
           {/* Discord送信ボタン & シート反映ボタン */}
           <div className="flex gap-2 mb-4">
             <button

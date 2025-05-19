@@ -1,6 +1,3 @@
-import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
 import FinalShifts from "../components/FinalShifts";
 
 export default function FinalSchedule() {
