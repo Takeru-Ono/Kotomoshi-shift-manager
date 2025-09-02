@@ -71,12 +71,12 @@ export default async function handler(req, res) {
     const spreadsheetId = process.env.SPREADSHEET_ID;
     const sheetName = `${year}${monthStr}`; // 例: 202505
 
-    // シートの先頭部分（A1:AK10）を取得して名前・日付の位置を特定
+    // シートの先頭部分（A1:AK11）を取得して名前・日付の位置を特定
     let sheetValues;
     try {
         const getRes = await sheets.spreadsheets.values.get({
             spreadsheetId,
-            range: `${sheetName}!A1:AK10`,
+            range: `${sheetName}!A1:AK11`,
             auth: sheetsAuth,
         });
         sheetValues = getRes.data.values || [];
@@ -85,8 +85,8 @@ export default async function handler(req, res) {
         return;
     }
 
-    // B3-B10の名前リスト抽出
-    const nameRows = [2, 3, 4, 5, 6, 7, 8, 9, 10]; // 0-indexed: 2~9 = B3~B10
+    // B3-B11の名前リスト抽出
+    const nameRows = [2, 3, 4, 5, 6, 7, 8, 9, 10]; // 0-indexed: 2~9 = B3~B11
     const names = nameRows.map(r => (sheetValues[r] && sheetValues[r][1]) ? sheetValues[r][1] : null).filter(Boolean);
 
     // C1, E1, G1...の日付リスト抽出（2列ごと、結合セル対応）
@@ -204,7 +204,7 @@ export default async function handler(req, res) {
         }
     });
 
-    // まずC3:AM10の偶数列（C, E, G, ..., AM）をクリア
+    // まずC3:AM11の偶数列（C, E, G, ..., AM）をクリア
     const clearRanges = [];
     const colLetters = [
         "C", "E", "G", "I", "K", "M", "O", "Q", "S", "U", "W", "Y", "AA", "AC", "AE", "AG", "AI", "AK", "AM"
