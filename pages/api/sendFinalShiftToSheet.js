@@ -86,7 +86,7 @@ export default async function handler(req, res) {
     }
 
     // B3-B10の名前リスト抽出
-    const nameRows = [2, 3, 4, 5, 6, 7, 8, 9]; // 0-indexed: 2~9 = B3~B10
+    const nameRows = [2, 3, 4, 5, 6, 7, 8, 9, 10]; // 0-indexed: 2~9 = B3~B10
     const names = nameRows.map(r => (sheetValues[r] && sheetValues[r][1]) ? sheetValues[r][1] : null).filter(Boolean);
 
     // C1, E1, G1...の日付リスト抽出（2列ごと、結合セル対応）
