@@ -210,7 +210,7 @@ export default async function handler(req, res) {
         "C", "E", "G", "I", "K", "M", "O", "Q", "S", "U", "W", "Y", "AA", "AC", "AE", "AG", "AI", "AK", "AM"
     ];
     colLetters.forEach(col => {
-        clearRanges.push(`${sheetName}!${col}3:${col}10`);
+        clearRanges.push(`${sheetName}!${col}3:${col}11`);
     });
     try {
         await sheets.spreadsheets.values.batchClear({
