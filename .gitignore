@@ -5,6 +5,7 @@ inbound-bee-457314-n1-9ba035ba7d85.json
 
 # dependencies
 /node_modules
+functions/node_modules
 /.pnp
 .pnp.*
 .yarn/*

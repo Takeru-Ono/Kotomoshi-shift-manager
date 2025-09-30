@@ -1,0 +1,23 @@
+{
+  "name": "shift-manager-functions",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "18"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "lint": "eslint --ext .js src || true",
+    "build": "npm run lint"
+  },
+  "dependencies": {
+    "@shift-manager/backend": "file:../backend",
+    "canvas": "^3.1.0",
+    "cors": "^2.8.5",
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^5.2.0",
+    "form-data": "^4.0.0",
+    "googleapis": "^148.0.0",
+    "node-fetch": "^3.3.2"
+  }
+}
