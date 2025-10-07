@@ -6,22 +6,37 @@ import { google } from "googleapis";
 
 // TODO: Google Sheets API連携のための認証・設定を追加
 export default async function handler(req, res) {
+    const requestId = `${new Date().toISOString()}-${Math.random().toString(36).slice(2,8)}`;
+    const log = (...args) => console.log(`[SheetAPI][${requestId}]`, ...args);
+    const logErr = (...args) => console.error(`[SheetAPI][${requestId}]`, ...args);
+
     if (req.method !== "POST") {
+        log("Invalid method:", req.method);
         res.status(405).json({ error: "Method not allowed" });
         return;
     }
 
     // 年・月情報を受け取る
     const { year, month } = req.body;
+    log("Request received", { year, month, ip: req.headers["x-forwarded-for"] || req.socket?.remoteAddress, ua: req.headers["user-agent"] });
 
     const privateKey = Buffer.from(
         process.env.FIREBASE_PRIVATE_KEY_B64 || "",
         "base64"
     ).toString("utf-8");
+    log("Env check", {
+        FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+        hasFirebaseKey: Boolean(process.env.FIREBASE_PRIVATE_KEY_B64),
+        spreadsheetIdSet: Boolean(process.env.SPREADSHEET_ID),
+        googleKeySet: Boolean(process.env.GOOGLE_PRIVATE_KEY_B64),
+        googleClientEmailSet: Boolean(process.env.GOOGLE_CLIENT_EMAIL),
+    });
+    log("Private key decoded", { length: privateKey ? privateKey.length : 0, beginsWithBEGIN: privateKey.startsWith("-----BEGIN") });
 
 
     // Firebase Admin SDK 初期化
     if (!admin.apps.length) {
+        log("Initializing Firebase Admin");
         admin.initializeApp({
             credential: admin.credential.cert({
                 type: process.env.FIREBASE_TYPE,
@@ -36,6 +51,9 @@ export default async function handler(req, res) {
                 client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
             }),
         });
+        log("Firebase Admin initialized", { apps: admin.apps.length });
+    } else {
+        log("Firebase Admin already initialized", { apps: admin.apps.length });
     }
     const db = admin.firestore();
 
@@ -44,16 +62,19 @@ export default async function handler(req, res) {
     const prefix = `${year}-${monthStr}`;
     let shiftData = [];
     try {
+        log("Querying Firestore", { prefix });
         const snapshot = await db.collection("finalShifts")
             .where("date", ">=", `${prefix}-01`)
             .where("date", "<=", `${prefix}-31`)
             .get();
+        log("Firestore result", { count: snapshot.size, empty: snapshot.empty });
         if (snapshot.empty) {
             res.status(404).json({ error: "指定年月の確定シフトが見つかりません。" });
             return;
         }
         shiftData = snapshot.docs.map(doc => doc.data());
     } catch (error) {
+        logErr("Firestore query error", error?.message);
         res.status(500).json({ error: "Firebase取得エラー", details: error.message });
         return;
     }
@@ -74,13 +95,16 @@ export default async function handler(req, res) {
     // シートの先頭部分（A1:AK11）を取得して名前・日付の位置を特定
     let sheetValues;
     try {
+        log("Reading sheet header", { spreadsheetId, sheetName });
         const getRes = await sheets.spreadsheets.values.get({
             spreadsheetId,
             range: `${sheetName}!A1:AK11`,
             auth: sheetsAuth,
         });
         sheetValues = getRes.data.values || [];
+        log("Read sheet header done", { rows: sheetValues.length, firstRowLen: sheetValues[0]?.length || 0 });
     } catch (error) {
+        logErr("Sheet read error", error?.message);
         res.status(500).json({ error: "シートの読み取りに失敗しました", details: error.message });
         return;
     }
@@ -116,6 +140,7 @@ export default async function handler(req, res) {
             }
         }
     }
+    log("Header parsed", { nameCount: names.length, dateCount: dates.length });
 
     // (name, date)→cell位置のマッピング
     // B列: 2,3,4,5,6,7,8,9 (B3~B10), C〜AK列: 2〜36 (C=2)
@@ -213,6 +238,7 @@ export default async function handler(req, res) {
         clearRanges.push(`${sheetName}!${col}3:${col}11`);
     });
     try {
+        log("Clearing ranges", { count: clearRanges.length });
         await sheets.spreadsheets.values.batchClear({
             spreadsheetId,
             auth: sheetsAuth,
@@ -221,12 +247,14 @@ export default async function handler(req, res) {
             }
         });
     } catch (error) {
+        logErr("Sheet clear error", error?.message);
         res.status(500).json({ error: "シートクリアに失敗しました", details: error.message, clearRanges });
         return;
     }
 
     // Google Sheetsへ一括書き込み
     try {
+        log("Writing updates", { count: updates.length });
         await sheets.spreadsheets.values.batchUpdate({
             spreadsheetId,
             auth: sheetsAuth,
@@ -235,7 +263,9 @@ export default async function handler(req, res) {
                 data: updates
             }
         });
+        log("Write success");
     } catch (error) {
+        logErr("Sheet write error", error?.message);
         res.status(500).json({ error: "シートへの書き込みに失敗しました", details: error.message, updates });
         return;
     }
@@ -267,6 +297,7 @@ export default async function handler(req, res) {
         year,
         month,
         ShiftData,
-        debugWrite
+        debugWrite,
+        requestId
     });
 }
